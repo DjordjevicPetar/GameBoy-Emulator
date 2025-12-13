@@ -1,0 +1,9 @@
+
+# ignore WebStorm workspace
+.idea
+
+# build artifacts
+artifacts
+
+# misc
+.DS_Store
