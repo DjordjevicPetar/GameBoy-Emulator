@@ -12,11 +12,11 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-    Emulator* emulator = Emulator::getInstance();
+    GameBoyEmulator* emulator = GameBoyEmulator::getInstance();
 
     emulator->setFilepath(argv[1]);
 
-    std::thread runningProgram(&Emulator::emulate, emulator);
+    std::thread runningProgram(&GameBoyEmulator::emulate, emulator);
 
     runningProgram.join();
 
