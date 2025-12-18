@@ -1,7 +1,7 @@
 #ifndef MMU_HPP_
 #define MMU_HPP_
 
-#include "constants.hpp"
+#include "constants_mmu.hpp"
 #include "cartridge.hpp"
 #include <cstdint>
 

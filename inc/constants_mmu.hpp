@@ -1,5 +1,5 @@
-#ifndef _CONSTANTS_HPP_
-#define _CONSTANTS_HPP_
+#ifndef _CONSTANTS_MMU_HPP_
+#define _CONSTANTS_MMU_HPP_
 
 #define STATIC_ROM_START 0x0000
 #define STATIC_ROM_END 0x3fff
