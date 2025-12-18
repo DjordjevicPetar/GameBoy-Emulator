@@ -136,6 +136,8 @@ private:
     void op_sbc_hl_ind();
     void op_sbc_imm();
     void op_cp_r();
+    void op_cp_hl_ind();
+    void op_cp_imm();
     void op_inc_r();
     void op_inc_hl_ind();
     void op_dec_r();
