@@ -30,7 +30,7 @@
 #define I_O_SIZE 0x4c
 
 #define HIGH_RAM_START 0xff80
-#define HIGHT_RAM_END 0xfffe
+#define HIGH_RAM_END 0xfffe
 #define HIGH_RAM_SIZE 0x7f
 
 #define INTERRUPT_REGISTER_ADDR 0xffff
