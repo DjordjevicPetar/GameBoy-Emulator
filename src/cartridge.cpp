@@ -2,6 +2,7 @@
 
 Cartridge::Cartridge() {
     currentBank = 1;
+    ram = vector<uint8_t>(); // TODO: determine the size
 }
 
 bool Cartridge::loadROM(string path) {
