@@ -1,10 +1,11 @@
 #include "../inc/cartridge.hpp"
 
 Cartridge::Cartridge() {
-    currentBank = 1;
+    current_bank = 1;
+    ram = vector<uint8_t>(); // TODO: determine the size
 }
 
-bool Cartridge::loadROM(string path) {
+bool Cartridge::load_rom(string path) {
     ifstream file(path, ios::in | ios::binary | ios::ate);
     if (!file.is_open()) {
         cerr << "Error: could not open ROM";
@@ -24,28 +25,58 @@ bool Cartridge::loadROM(string path) {
     return true;
 }
 
-void Cartridge::printROM() {
+void Cartridge::parse_header() {
+    rom_banks = rom.size() / SWITCHABLE_ROM_SIZE;
+
+    uint8_t val = rom[HEADER_RAM_SIZE_ADDR];
+    ram_banks = 0;
+    switch (val) {
+        case 0x00:
+            ram_banks = 0;
+            break;
+        case 0x01: // Unused
+            ram_banks = 0;
+            break;
+        case 0x02:
+            ram_banks = 1;
+            break;
+        case 0x03:
+            ram_banks = 4;
+            break;
+        case 0x04:
+            ram_banks = 16;
+            break;
+        case 0x05:
+            ram_banks = 8;
+            break;
+    }
+    if (ram_banks > 0) {
+        ram.resize(ram_banks * SWITCHABLE_RAM_SIZE);
+    }
+}
+
+void Cartridge::print_rom() {
     for (int i = 0; i < rom.size(); i++) {
         cout << hex << setw(2) << setfill('0') << (int)rom[i];
     }
     cout << dec;
-    cout << 67;
 }
 
 
-uint8_t Cartridge::read8(uint16_t addr) {
+uint8_t Cartridge::read8_rom(uint16_t addr) {
     if (addr <= STATIC_ROM_END) {
         return rom[addr];
     }
     else if (addr <= SWITCHABLE_ROM_END) {
-        return rom[currentBank * SWITCHABLE_ROM_SIZE + (addr - SWITCHABLE_ROM_START)];
+        return rom[current_bank * SWITCHABLE_ROM_SIZE + (addr - SWITCHABLE_ROM_START)];
     }
     return 0xff; // might change
 }
 
-void Cartridge::write8(uint16_t addr, uint8_t val) {
-    if (addr >= BANK_SWITCHING_START && addr <= BANK_SWITCHING_END) {
-        currentBank = val & ROM_BANKS_MASK;
-        if (currentBank == 0) currentBank = 1;
+void Cartridge::write8_rom(uint16_t addr, uint8_t val) {
+    if (addr >= ROM_BANK_SELECT_START && addr <= ROM_BANK_SELECT_END) {
+        current_bank = val & MBC1_ROM_BANKS_MASK;
+        if (current_bank == 0) current_bank = 1;
+        current_bank %= rom_banks;
     }
 }

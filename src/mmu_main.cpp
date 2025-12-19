@@ -6,8 +6,8 @@ using namespace std;
 int main() {
     Cartridge cartridge;
 
-    cartridge.loadROM("cpu_instrs.gb");
-    cartridge.printROM();
+    cartridge.load_rom("cpu_instrs.gb");
+    cartridge.print_rom();
     system("pause");
 
     
