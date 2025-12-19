@@ -17,11 +17,17 @@ private:
 
     uint8_t current_opcode;
 
+    bool IME;
+
     // Memory
     uint8_t memory[MEMORY_SIZE];
     uint8_t read_memory(uint16_t address) const;
     void write_memory(uint16_t address, uint8_t value);
     uint16_t endian_swap(uint8_t value1, uint8_t value2) const;
+
+    // Stop conditions
+    bool stop_cpu;
+    bool stop_gpu;
 
     // Registers
     uint16_t AF;    
@@ -49,6 +55,10 @@ private:
     // memory arguments helper functions
     uint16_t read_register_16_bit_memory(uint8_t register_number);
     void write_register_16_bit_memory(uint8_t register_number, uint16_t value);
+    // bit arguments helper functions
+    uint8_t read_bit_argument() const;
+    // condition arguments helper functions
+    uint8_t read_condition_argument() const;
 
     // 8-bit registers helper functions
     inline uint8_t getA() const { return (AF >> 8) & 0xFF; }
@@ -125,9 +135,10 @@ private:
     
     // 8-bit arithmetic and logical instructions
     void op_add_r();
-    void op_adc_hl_ind();
+    void op_add_hl_ind();
     void op_add_imm();
     void op_adc_r();
+    void op_adc_hl_ind();
     void op_adc_imm();
     void op_sub_r();
     void op_sub_hl_ind();
@@ -167,27 +178,7 @@ private:
     void op_rrca();
     void op_rla();
     void op_rra();
-    
-    // Control flow instructions
-    void op_jp_imm();
-    void op_jp_hl();
-    void op_jp_cc_imm();
-    void op_jr_e();
-    void op_jr_cc_e();
-    void op_call_imm();
-    void op_call_cc_imm();
-    void op_ret();
-    void op_ret_cc();
-    void op_reti();
-    void op_rst_imm();
-    
-    // Miscellaneous instructions
-    void op_halt();
-    void op_stop();
-    void op_di();
-    void op_ei();
-    void op_nop();
-    
+
     // CB prefix instructions
     void op_rlc_r();
     void op_rlc_hl_ind();
@@ -211,6 +202,26 @@ private:
     void op_res_b_hl_ind();
     void op_set_b_r();
     void op_set_b_hl_ind();
+    
+    // Control flow instructions
+    void op_jp_imm();
+    void op_jp_hl();
+    void op_jp_cc_imm();
+    void op_jr_e();
+    void op_jr_cc_e();
+    void op_call_imm();
+    void op_call_cc_imm();
+    void op_ret();
+    void op_ret_cc();
+    void op_reti();
+    void op_rst_imm();
+    
+    // Miscellaneous instructions
+    void op_halt();
+    void op_stop();
+    void op_di();
+    void op_ei();
+    void op_nop();
 
 public:
 
