@@ -6,6 +6,9 @@ GameBoyEmulator* GameBoyEmulator::instance = nullptr;
 GameBoyEmulator::GameBoyEmulator() {
     // Initialize instruction handlers through InstructionDecoder
     InstructionDecoder::initializeHandlers(this);
+    this->IME = false;
+    this->stop_cpu = false;
+    this->stop_gpu = false;
 }
 
 GameBoyEmulator* GameBoyEmulator::getInstance() {
@@ -184,6 +187,21 @@ void GameBoyEmulator::write_register_16_bit_memory(uint8_t register_number, uint
         case 2: HL = value; HL++; break;
         case 3: HL = value; HL--; break;
         default: throw std::runtime_error("Invalid register number");
+    }
+}
+
+uint8_t GameBoyEmulator::read_bit_argument() const {
+    return (current_opcode >> 3) & 0x07;
+}
+
+uint8_t GameBoyEmulator::read_condition_argument() const {
+    uint8_t condition = (current_opcode >> 3) & 0x03;
+    switch (condition) {
+        case 0: return getFlagN() & getFlagZ();
+        case 1: return getFlagZ();
+        case 2: return getFlagN() & getFlagC();
+        case 3: return getFlagC();
+        default: throw std::runtime_error("Invalid condition");
     }
 }
 
@@ -366,6 +384,28 @@ void GameBoyEmulator::op_pop_rr() {
 }
 
 void GameBoyEmulator::op_ld_hl_sp_e() {
+    uint8_t value = fetchOpcode();
+    bool h_bit;
+    bool c_bit;
+    if (value >> 7) {
+        value = ~value + 1;
+        HL = SP - value;
+        h_bit = (SP & 0x0F) < (value & 0x0F);
+        c_bit = (SP & 0xFF) < (value & 0xFF);
+    } else {
+        HL = SP + value;
+        h_bit = (SP & 0x0F) + (value & 0x0F) > 0x0F;
+        c_bit = (SP & 0xFF) + (value & 0xFF) > 0xFF;
+    }
+    setFlagZ(0);
+    setFlagN(0);
+    setFlagH(h_bit);
+    setFlagC(c_bit);
+    return 8; // 8 cycles
+}
+
+// 8-bit arithmetic and logical instructions
+void GameBoyEmulator::op_add_r() {
     uint8_t source_register = read_second_register_8_bit_parameter();
     uint8_t value = read_register_8_bit(source_register);
     bool h_bit = (getA() & 0x0F) + (value & 0x0F) > 0x0F;
@@ -378,8 +418,7 @@ void GameBoyEmulator::op_ld_hl_sp_e() {
     return 4; // 4 cycles
 }
 
-// 8-bit arithmetic and logical instructions
-void GameBoyEmulator::op_add_r() {
+void GameBoyEmulator::op_add_hl_ind() {
     uint8_t value = read_memory(HL);
     bool h_bit = (getA() & 0x0F) + (value & 0x0F) > 0x0F;
     bool c_bit = (static_cast<uint16_t>(getA()) & 0xFF) + (static_cast<uint16_t>(value) & 0xFF) > 0xFF;
@@ -758,7 +797,24 @@ void GameBoyEmulator::op_add_hl_rr() {
 }
 
 void GameBoyEmulator::op_add_sp_e() {
-    // TODO
+    uint8_t value = fetchOpcode();
+    bool h_bit;
+    bool c_bit;
+    if (value >> 7) {
+        value = ~value + 1;
+        SP = SP - value;
+        h_bit = (SP & 0x0F) < (value & 0x0F);
+        c_bit = (SP & 0xFF) < (value & 0xFF);
+    } else {
+        SP = SP + value;
+        h_bit = (SP & 0x0F) + (value & 0x0F) > 0x0F;
+        c_bit = (SP & 0xFF) + (value & 0xFF) > 0xFF;
+    }
+    setFlagZ(0);
+    setFlagN(0);
+    setFlagH(h_bit);
+    setFlagC(c_bit);
+    return 16; // 16 cycles
 }
 
 // Rotate, shift, and bit operation instructions
@@ -812,156 +868,376 @@ void GameBoyEmulator::op_rra() {
 
 // CB prefix instructions
 void GameBoyEmulator::op_rlc_r() {
-
+    uint8_t destination_register = read_second_register_8_bit_parameter();
+    uint8_t value = read_register_8_bit(destination_register);
+    bool c_bit = value >> 7;
+    value = (value << 1) | c_bit;
+    write_register_8_bit(destination_register, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_rlc_hl_ind() {
-    // TODO
+    uint8_t value = read_memory(HL);
+    bool c_bit = value >> 7;
+    value = (value << 1) | c_bit;
+    write_memory(HL, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 16; // 16 cycles
 }
 
 void GameBoyEmulator::op_rrc_r() {
-    // TODO
+    uint8_t destination_register = read_second_register_8_bit_parameter();
+    uint8_t value = read_register_8_bit(destination_register);
+    bool c_bit = value & 0x01;
+    value = (value >> 1) | (c_bit << 7);
+    write_register_8_bit(destination_register, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_rrc_hl_ind() {
-    // TODO
+    uint8_t value = read_memory(HL);
+    bool c_bit = value & 0x01;
+    value = (value >> 1) | (c_bit << 7);
+    write_memory(HL, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 16; // 16 cycles
 }
 
 void GameBoyEmulator::op_rl_r() {
-    // TODO
+    uint8_t destination_register = read_second_register_8_bit_parameter();
+    uint8_t value = read_register_8_bit(destination_register);
+    bool c_bit = value >> 7;
+    value = (value << 1) | getFlagC();
+    write_register_8_bit(destination_register, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_rl_hl_ind() {
-    // TODO
+    uint8_t value = read_memory(HL);
+    bool c_bit = value >> 7;
+    value = (value << 1) | getFlagC();
+    write_memory(HL, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 16; // 16 cycles
 }
 
 void GameBoyEmulator::op_rr_r() {
-    // TODO
+    uint8_t destination_register = read_second_register_8_bit_parameter();
+    uint8_t value = read_register_8_bit(destination_register);
+    bool c_bit = value & 0x01;
+    value = (value >> 1) | (getFlagC() << 7);
+    write_register_8_bit(destination_register, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_rr_hl_ind() {
-    // TODO
+    uint8_t value = read_memory(HL);
+    bool c_bit = value & 0x01;
+    value = (value >> 1) | (getFlagC() << 7);
+    write_memory(HL, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 16; // 16 cycles
 }
 
 void GameBoyEmulator::op_sla_r() {
-    // TODO
+    uint8_t destination_register = read_second_register_8_bit_parameter();
+    uint8_t value = read_register_8_bit(destination_register);
+    bool c_bit = value >> 7;
+    value = value << 1;
+    write_register_8_bit(destination_register, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_sla_hl_ind() {
-    // TODO
+    uint8_t value = read_memory(HL);
+    bool c_bit = value >> 7;
+    value = value << 1;
+    write_memory(HL, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 16; // 16 cycles
 }
 
 void GameBoyEmulator::op_sra_r() {
-    // TODO
+    uint8_t destination_register = read_second_register_8_bit_parameter();
+    uint8_t value = read_register_8_bit(destination_register);
+    bool c_bit = value & 0x01;
+    value = (value >> 1) | (value & 0x80);
+    write_register_8_bit(destination_register, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_sra_hl_ind() {
-    // TODO
+    uint8_t value = read_memory(HL);
+    bool c_bit = value & 0x01;
+    value = value >> 1;
+    write_memory(HL, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 16; // 16 cycles
 }
 
 void GameBoyEmulator::op_swap_r() {
-    // TODO
+    uint8_t destination_register = read_second_register_8_bit_parameter();
+    uint8_t value = read_register_8_bit(destination_register);
+    value = (value << 4) | (value >> 4);
+    write_register_8_bit(destination_register, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(0);
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_swap_hl_ind() {
-    // TODO
+    uint8_t value = read_memory(HL);
+    value = (value << 4) | (value >> 4);
+    write_memory(HL, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(0);
+    return 16; // 16 cycles
 }
 
 void GameBoyEmulator::op_srl_r() {
-    // TODO
+    uint8_t destination_register = read_second_register_8_bit_parameter();
+    uint8_t value = read_register_8_bit(destination_register);
+    bool c_bit = value & 0x01;
+    value = value >> 1;
+    write_register_8_bit(destination_register, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_srl_hl_ind() {
-    // TODO
+    uint8_t value = read_memory(HL);
+    bool c_bit = value & 0x01;
+    value = value >> 1;
+    write_memory(HL, value);
+    setFlagZ(value == 0);
+    setFlagN(0);
+    setFlagH(0);
+    setFlagC(c_bit);
+    return 16; // 16 cycles
 }
 
 void GameBoyEmulator::op_bit_b_r() {
-    // TODO
+    uint8_t source_register = read_second_register_8_bit_parameter();
+    uint8_t value = read_register_8_bit(source_register);
+    bool bit = value & (1 << read_bit_argument());
+    setFlagZ(bit == 0);
+    setFlagN(0);
+    setFlagH(1);
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_bit_b_hl_ind() {
-    // TODO
+    uint8_t value = read_memory(HL);
+    bool bit = value & (1 << read_bit_argument());
+    setFlagZ(bit == 0);
+    setFlagN(0);
+    setFlagH(1);
+    return 12; // 12 cycles
 }
 
 void GameBoyEmulator::op_res_b_r() {
-    // TODO
+    uint8_t source_register = read_second_register_8_bit_parameter();
+    uint8_t value = read_register_8_bit(source_register);
+    value = value & ~(1 << read_bit_argument());
+    write_register_8_bit(source_register, value);
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_res_b_hl_ind() {
-    // TODO
+    uint8_t value = read_memory(HL);
+    value = value & ~(1 << read_bit_argument());
+    write_memory(HL, value);
+    return 16; // 16 cycles
 }
 
 void GameBoyEmulator::op_set_b_r() {
-    // TODO
+    uint8_t source_register = read_second_register_8_bit_parameter();
+    uint8_t value = read_register_8_bit(source_register);
+    value = value | (1 << read_bit_argument());
+    write_register_8_bit(source_register, value);
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_set_b_hl_ind() {
-    // TODO
+    uint8_t value = read_memory(HL);
+    value = value | (1 << read_bit_argument());
+    write_memory(HL, value);
+    return 16; // 16 cycles
 }
 
 
 // Control flow instructions
 void GameBoyEmulator::op_jp_imm() {
-    // TODO
+    uint16_t address = endian_swap(fetchOpcode(), fetchOpcode());
+    PC = address;
+    return 16; // 16 cycles
 }
 
 void GameBoyEmulator::op_jp_hl() {
-    // TODO
+    PC = HL;
+    return 4; // 4 cycles
 }
 
 void GameBoyEmulator::op_jp_cc_imm() {
-    // TODO
+    uint16_t address = endian_swap(fetchOpcode(), fetchOpcode());
+    if (read_condition_argument()) {
+        PC = address;
+        return 16; // 16 cycles
+    }
+    return 12; // 12 cycles
 }
 
 void GameBoyEmulator::op_jr_e() {
-    // TODO
+    uint8_t value = fetchOpcode();
+    if (value >> 7) {
+        value = ~value + 1;
+        PC = PC - value;
+    } else {
+        PC = PC + value;
+    }
+    return 12; // 12 cycles
 }
 
 void GameBoyEmulator::op_jr_cc_e() {
-    // TODO
+    uint8_t value = fetchOpcode();
+    if (read_condition_argument()) {
+        if (value >> 7) {
+            value = ~value + 1;
+            PC = PC - value;
+        } else {
+            PC = PC + value;
+        }
+        return 12; // 12 cycles
+    }
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_call_imm() {
-    // TODO
+    uint16_t address = endian_swap(fetchOpcode(), fetchOpcode());
+    write_memory(SP - 1, PC & 0xFF);
+    write_memory(SP - 2, PC >> 8);
+    SP -= 2;
+    PC = address;
+    return 24; // 24 cycles
 }
 
 void GameBoyEmulator::op_call_cc_imm() {
-    // TODO
+    uint16_t address = endian_swap(fetchOpcode(), fetchOpcode());
+    if (read_condition_argument()) {
+        write_memory(SP - 1, PC & 0xFF);
+        write_memory(SP - 2, PC >> 8);
+        SP -= 2;
+        PC = address;
+        return 24; // 24 cycles
+    }
+    return 12; // 12 cycles
 }
 
 void GameBoyEmulator::op_ret() {
-    // TODO
+    uint16_t address = read_memory(SP) | (read_memory(SP + 1) << 8);
+    SP += 2;
+    PC = address;
+    return 16; // 16 cycles
 }
 
 void GameBoyEmulator::op_ret_cc() {
-    // TODO
+    if (read_condition_argument()) {
+        uint16_t address = read_memory(SP) | (read_memory(SP + 1) << 8);
+        SP += 2;
+        PC = address;
+        return 20; // 20 cycles
+    }
+    return 8; // 8 cycles
 }
 
 void GameBoyEmulator::op_reti() {
-    // TODO
+    uint16_t address = read_memory(SP) | (read_memory(SP + 1) << 8);
+    SP += 2;
+    PC = address;
+    IME = true;
+    return 16;
 }
 
 void GameBoyEmulator::op_rst_imm() {
-    // TODO
+    write_memory(SP - 1, PC & 0xFF);
+    write_memory(SP - 2, PC >> 8);
+    SP -= 2;
+    PC = read_bit_argument() << 3;
+    return 16; // 16 cycles
 }
 
 // Miscellaneous instructions
 void GameBoyEmulator::op_halt() {
-    // TODO
+    stop_cpu = true;
+    return 4; // 4 cycles
 }
 
 void GameBoyEmulator::op_stop() {
-    // TODO
+    stop_cpu = true;
+    stop_gpu = true
+    return 4; // 4 cycles
 }
 
 void GameBoyEmulator::op_di() {
-    // TODO
+    IME = false;
+    // TODO: Add interrupt handling
+    return 4; // 4 cycles
 }
 
 void GameBoyEmulator::op_ei() {
-    // TODO
+    IME = true;
+    return 4; // 4 cycles
 }
 
 void GameBoyEmulator::op_nop() {
-    // TODO
+    return 4; // 4 cycles
 }
