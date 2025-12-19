@@ -8,13 +8,13 @@ MMU::MMU() {
 
 uint8_t MMU::read8(uint16_t addr) {
     if (addr <= SWITCHABLE_ROM_END) {
-        return cartridge.read8(addr);
+        return cartridge.read8_rom(addr);
     }
     else if (addr <= VRAM_END) {
         return vram[addr - VRAM_START];
     }
     else if (addr <= SWITCHABLE_RAM_END) {
-        return cartridge.readRAM(addr);
+        return cartridge.read8_ram(addr);
     }
     else if (addr <= INTERNAL_RAM_END) {
         return internal_ram[addr - INTERNAL_RAM_START];
@@ -39,6 +39,6 @@ uint8_t MMU::read8(uint16_t addr) {
 
 void MMU::write8(uint16_t addr, uint8_t val) {
     if (addr <= SWITCHABLE_ROM_END) {
-        cartridge.write8(addr, val);
+        cartridge.write8_rom(addr, val);
     }
 }
