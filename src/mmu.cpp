@@ -6,7 +6,8 @@ MMU::MMU() {
     sprite_attributes = vector<uint8_t>(SPRITE_ATTRIBUTES_SIZE, 0);
 }
 
-uint8_t MMU::read8(uint16_t addr) {
+uint8_t MMU::read_memory_8(uint16_t addr) const {
+    // ! Ovde mi puca program, kad pokrenem fetchOpcode()
     if (addr <= SWITCHABLE_ROM_END) {
         return cartridge.read8_rom(addr);
     }
@@ -21,7 +22,7 @@ uint8_t MMU::read8(uint16_t addr) {
     }
     else if (addr <= SPRITE_ATTRIBUTES_END) {
         if (addr >= SPRITE_ATTRIBUTES_START) {
-            sprite_attributes[addr - SPRITE_ATTRIBUTES_START];
+            return sprite_attributes[addr - SPRITE_ATTRIBUTES_START];
         }
     }
     else if (addr <= I_O_END) {
@@ -37,7 +38,7 @@ uint8_t MMU::read8(uint16_t addr) {
     return 0xff; // placeholder
 }
 
-void MMU::write8(uint16_t addr, uint8_t val) {
+void MMU::write_memory_8(uint16_t addr, uint8_t val) {
     if (addr <= SWITCHABLE_ROM_END) {
         cartridge.write8_rom(addr, val);
     }

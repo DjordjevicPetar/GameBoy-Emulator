@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <thread>
-#include "../inc/emulator.h"
+#include "../inc/game_boy_emulator.hpp"
 
 int main(int argc, char* argv[]){
 

@@ -9,8 +9,8 @@ class MMU {
 public:
     MMU();
 
-    uint8_t read8(uint16_t addr); // will separate based on address scope
-    void write8(uint16_t addr, uint8_t val); // will separate based on address scope
+    uint8_t read_memory_8(uint16_t addr) const; // will separate based on address scope
+    void write_memory_8(uint16_t addr, uint8_t val); // will separate based on address scope
 private:
     Cartridge cartridge;
     vector<uint8_t> vram;

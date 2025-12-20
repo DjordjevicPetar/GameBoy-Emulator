@@ -1,14 +1,14 @@
-#include "../inc/instruction_decoder.h"
-#include "../inc/game_boy_emulator.h"
+#include "../inc/instruction_decoder.hpp"
+#include "../inc/game_boy_emulator.hpp"
 
-void InstructionDecoder::initializeHandlers(GameBoyEmulator* emulator) {
-    registerInstructions(emulator);
-    registerCbInstructions(emulator);
+void InstructionDecoder::initializeHandlers() {
+    registerInstructions();
+    registerCbInstructions();
 }
 
-void InstructionDecoder::registerInstructions(GameBoyEmulator* emulator) {
+void InstructionDecoder::registerInstructions() {
     // Access op_handlers through friend class access
-    auto& handlers = emulator->op_handlers;
+    auto& handlers = GameBoyEmulator::getInstance()->op_handlers;
     
     // Register all instruction handlers here
     // Op(mask, pattern) - use 0xFF mask to match exact opcode value
@@ -102,13 +102,13 @@ void InstructionDecoder::registerInstructions(GameBoyEmulator* emulator) {
         {Op(0xFF, 0x10), &GameBoyEmulator::op_stop},
         {Op(0xFF, 0xF3), &GameBoyEmulator::op_di},
         {Op(0xFF, 0xFB), &GameBoyEmulator::op_ei},
-        {Op(0xFF, 0x00), &GameBoyEmulator::op_nop},
+        {Op(0xFF, 0x00), &GameBoyEmulator::op_nop}
     };
 }
 
-void InstructionDecoder::registerCbInstructions(GameBoyEmulator* emulator) {
+void InstructionDecoder::registerCbInstructions() {
     // Access cb_handlers through friend class access
-    auto& handlers = emulator->cb_handlers;
+    auto& handlers = GameBoyEmulator::getInstance()->cb_handlers;
     
     // Register all CB prefix instruction handlers here
     // Op(mask, pattern) - use 0xFF mask to match exact opcode value

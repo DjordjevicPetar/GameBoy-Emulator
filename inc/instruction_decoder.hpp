@@ -30,13 +30,13 @@ public:
     };
 
     // Initialize and register all instruction handlers
-    static void initializeHandlers(GameBoyEmulator* emulator);
+    static void initializeHandlers();
     
 private:
     // Helper method to register individual instructions
-    static void registerInstructions(GameBoyEmulator* emulator);
+    static void registerInstructions();
     // Helper method to register CB prefix instructions
-    static void registerCbInstructions(GameBoyEmulator* emulator);
+    static void registerCbInstructions();
 };
 
 #endif
