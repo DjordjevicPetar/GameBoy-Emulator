@@ -9,13 +9,13 @@ MMU::MMU() {
 uint8_t MMU::read_memory_8(uint16_t addr) const {
     // ! Ovde mi puca program, kad pokrenem fetchOpcode()
     if (addr <= SWITCHABLE_ROM_END) {
-        return cartridge.read8_rom(addr);
+        return cartridge.read8(addr);
     }
     else if (addr <= VRAM_END) {
         return vram[addr - VRAM_START];
     }
     else if (addr <= SWITCHABLE_RAM_END) {
-        return cartridge.read8_ram(addr);
+        return cartridge.read8(addr);
     }
     else if (addr <= INTERNAL_RAM_END) {
         return internal_ram[addr - INTERNAL_RAM_START];
@@ -40,6 +40,6 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
 
 void MMU::write_memory_8(uint16_t addr, uint8_t val) {
     if (addr <= SWITCHABLE_ROM_END) {
-        cartridge.write8_rom(addr, val);
+        cartridge.write8(addr, val);
     }
 }

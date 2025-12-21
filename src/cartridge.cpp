@@ -1,8 +1,7 @@
 #include "../inc/cartridge.hpp"
 
 Cartridge::Cartridge() {
-    current_bank = 1;
-    ram = vector<uint8_t>(); // TODO: determine the size
+    // TODO : Maybe make load_rom and parse_header private and call them here
 }
 
 bool Cartridge::load_rom(string path) {
@@ -59,28 +58,10 @@ void Cartridge::print_rom() {
 }
 
 
-uint8_t Cartridge::read8_rom(uint16_t addr) const {
-    if (addr <= STATIC_ROM_END) {
-        return rom[addr];
-    }
-    else if (addr <= SWITCHABLE_ROM_END) {
-        return rom[current_bank * SWITCHABLE_ROM_SIZE + (addr - SWITCHABLE_ROM_START)];
-    }
-    return 0xff; // might change
+uint8_t Cartridge::read8(uint16_t addr) const {
+    mbc->read(addr);
 }
 
-void Cartridge::write8_rom(uint16_t addr, uint8_t val) {
-    if (addr >= ROM_BANK_SELECT_START && addr <= ROM_BANK_SELECT_END) {
-        current_bank = val & MBC1_ROM_BANKS_MASK;
-        if (current_bank == 0) current_bank = 1;
-        current_bank %= rom_banks;
-    }
-}
-
-uint8_t Cartridge::read8_ram(uint16_t addr) const {
-    return 0xff; // TODO
-}
-
-void Cartridge::write8_ram(uint16_t addr, uint8_t val) {
-    // TODO
+void Cartridge::write8(uint16_t addr, uint8_t val) {
+    mbc->write(addr, val);
 }
