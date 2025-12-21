@@ -16,12 +16,8 @@ bool Cartridge::load_rom(string path) {
     vector<uint8_t> buffer = vector<uint8_t>(fileSize);
     file.read(reinterpret_cast<char *>(buffer.data()), fileSize);
     for (int i = 0; i < fileSize; i++) {
-        cout << hex << setw(2) << setfill('0') << (int)buffer[i];
-    }
-    for (int i = 0; i < fileSize; i++) {
         rom.push_back(buffer[i]);
     }
-    system("pause");
     return true;
 }
 
@@ -56,14 +52,14 @@ void Cartridge::parse_header() {
 }
 
 void Cartridge::print_rom() {
-    for (int i = 0; i < rom.size(); i++) {
+    for (size_t i = 0; i < rom.size(); i++) {
         cout << hex << setw(2) << setfill('0') << (int)rom[i];
     }
     cout << dec;
 }
 
 
-uint8_t Cartridge::read8_rom(uint16_t addr) {
+uint8_t Cartridge::read8_rom(uint16_t addr) const {
     if (addr <= STATIC_ROM_END) {
         return rom[addr];
     }
@@ -79,4 +75,12 @@ void Cartridge::write8_rom(uint16_t addr, uint8_t val) {
         if (current_bank == 0) current_bank = 1;
         current_bank %= rom_banks;
     }
+}
+
+uint8_t Cartridge::read8_ram(uint16_t addr) const {
+    return 0xff; // TODO
+}
+
+void Cartridge::write8_ram(uint16_t addr, uint8_t val) {
+    // TODO
 }

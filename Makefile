@@ -1,5 +1,5 @@
 TARGET := .\chip8.exe
-SOURCES := $(wildcard src/*.cpp)
+SOURCES := $(filter-out src/mmu_main.cpp,$(wildcard src/*.cpp))
 CXX := g++
 CXXFLAGS := -std=c++17 -O2 -Wall
 
