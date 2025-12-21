@@ -28,6 +28,7 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
     else if (addr <= I_O_END) {
         if (addr >= I_O_START) {
             // TODO
+            // TODO Timer
         }
     }
     else if (addr <= HIGH_RAM_END) {
@@ -42,4 +43,5 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
     if (addr <= SWITCHABLE_ROM_END) {
         cartridge.write8_rom(addr, val);
     }
+    // TODO Timer
 }
