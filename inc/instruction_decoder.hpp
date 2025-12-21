@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-class GameBoyEmulator;
+class CPU;
 
 class InstructionDecoder {
 public:
@@ -30,13 +30,13 @@ public:
     };
 
     // Initialize and register all instruction handlers
-    static void initializeHandlers();
+    static void initializeHandlers(CPU* cpu);
     
 private:
     // Helper method to register individual instructions
-    static void registerInstructions();
+    static void registerInstructions(CPU* cpu);
     // Helper method to register CB prefix instructions
-    static void registerCbInstructions();
+    static void registerCbInstructions(CPU* cpu);
 };
 
 #endif
