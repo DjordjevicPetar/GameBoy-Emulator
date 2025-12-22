@@ -4,7 +4,10 @@
 
 GameBoyEmulator* GameBoyEmulator::instance = nullptr;
 
-GameBoyEmulator::GameBoyEmulator() : cpu(&mmu) {
+GameBoyEmulator::GameBoyEmulator() 
+    : mmu(),
+      cpu(&mmu, &interrupt_controller), 
+      timer(&interrupt_controller) {
     this->stop_cpu = false;
     this->stop_gpu = false;
     this->cycles_executed = 0;
@@ -28,6 +31,7 @@ void GameBoyEmulator::emulate() {
     // Main emulation loop
     while (true) {
         uint8_t cycles = cpu.execute_next_instruction();
+        cycles += cpu.handle_interrupts();
         cycles_executed += cycles;
         
         // Handle timer
@@ -38,5 +42,6 @@ void GameBoyEmulator::emulate() {
         if (stop_cpu) {
             break;
         }
+
     }
 }

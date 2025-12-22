@@ -4,6 +4,7 @@
 #include "../inc/cpu.hpp"
 #include "../inc/mmu.hpp"
 #include "../inc/timer.hpp"
+#include "../inc/interrupt_controller.hpp"
 #include <string>
 
 class GameBoyEmulator {
@@ -11,6 +12,7 @@ private:
     CPU cpu;
     MMU mmu;
     Timer timer;
+    InterruptController interrupt_controller;
     // Stop conditions
     bool stop_cpu;
     bool stop_gpu;

@@ -3,9 +3,14 @@
 
 #include "../inc/constants.hpp"
 
+// Forward declaration
+class InterruptController;
+
 class Timer {
 
 private:
+    InterruptController* interrupt_controller;
+    
     uint8_t div_register;
     uint8_t tima_register;
     uint8_t tma_register;
@@ -21,7 +26,7 @@ private:
     void update_div();
 
 public:
-    Timer();
+    Timer(InterruptController* interrupt_controller);
     void update_timer(uint32_t cycles);
     void write_timer(uint16_t address, uint8_t value);
     uint8_t read_timer(uint16_t address);
