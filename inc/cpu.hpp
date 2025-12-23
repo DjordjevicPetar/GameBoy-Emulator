@@ -7,8 +7,9 @@
 #include <unordered_map>
 #include <cstdint>
 
-// Forward declaration
+// Forward declarations
 class InstructionDecoder;
+class InterruptController;
 
 class CPU {
     // Allow InstructionDecoder to access private members
@@ -16,9 +17,10 @@ class CPU {
 
 private:
     MMU* mmu;  // Pointer to MMU for memory access
+    InterruptController* interrupt_controller;  // Pointer to InterruptController
     
     uint8_t current_opcode;
-    bool IME;
+    bool IME;  // Interrupt Master Enable flag
 
     // Registers
     uint16_t AF;    
@@ -209,14 +211,15 @@ private:
     uint8_t op_nop();
 
 public:
-    CPU(MMU* mmu);
+    CPU(MMU* mmu, InterruptController* interrupt_controller);
     
     // Main execution function - returns number of cycles
     uint8_t execute_next_instruction();
-    
+    uint8_t handle_interrupts();
     // Getters for IME (if needed by other components)
     bool getIME() const { return IME; }
     void setIME(bool value) { IME = value; }
+
 };
 
 #endif

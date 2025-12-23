@@ -1,8 +1,10 @@
 #include "../inc/cpu.hpp"
 #include "../inc/instruction_decoder.hpp"
+#include "../inc/interrupt_controller.hpp"
 #include <iostream>
 
-CPU::CPU(MMU* mmu) : mmu(mmu) {
+CPU::CPU(MMU* mmu, InterruptController* interrupt_controller) 
+    : mmu(mmu), interrupt_controller(interrupt_controller) {
     this->IME = false;
     
     // Initialize registers
@@ -43,6 +45,22 @@ uint8_t CPU::execute_next_instruction() {
         throw std::runtime_error("Undefined opcode");
     }
     
+    return 0;
+}
+
+uint8_t CPU::handle_interrupts() {
+    if (!IME) {
+        return 0;
+    }
+    uint16_t interrupt_address = interrupt_controller->get_address_of_highest_priority_interrupt();
+    if (interrupt_address != INTERRUPT_HANDLER_NONE_ADDRESS) {
+        mmu->write_memory_8(SP - 1, PC & 0xFF);
+        mmu->write_memory_8(SP - 2, PC >> 8);
+        SP -= 2;
+        PC = interrupt_address;
+        IME = false;
+        return 5; // 5 cycles to handle the interrupt
+    }
     return 0;
 }
 

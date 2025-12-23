@@ -1,6 +1,9 @@
 #include "../inc/timer.hpp"
+#include "../inc/interrupt_controller.hpp"
+#include "../inc/constants.hpp"
 
-Timer::Timer() {
+Timer::Timer(InterruptController* interrupt_controller) 
+    : interrupt_controller(interrupt_controller) {
     this->div_register = 0xAB;
     this->tima_register = 0x00;
     this->tma_register = 0x00;
@@ -28,18 +31,18 @@ void Timer::update_timer(uint32_t cycles) {
 }
 
 void Timer::update_tima() {
-    while (!has_enough_cycles_passed_tima()) {
+    while (has_enough_cycles_passed_tima()) {
         tima_register++;
         if (tima_register == 0x00) {
             tima_register = tma_register;
-            // TODO Request interrpupt
+            interrupt_controller->request_interrupt(INTERRUPT_TIMER_BIT);
         }
         cycles_since_last_update_tima -= (DMG_CLOCK_SPEED / TAC_FREQUENCIES[tac_register & 0x03]);
     }
 }
 
 void Timer::update_div() {
-    while (!has_enough_cycles_passed_div()) {
+    while (has_enough_cycles_passed_div()) {
         div_register++;
         cycles_since_last_update_div -= (DMG_CLOCK_SPEED / DIV_FREQUENCY);
     }
