@@ -9,12 +9,12 @@ using namespace std;
 
 class MBC {
 public:
+    virtual ~MBC() = default;
     virtual uint8_t read(uint16_t addr) = 0;
     virtual void write(uint16_t addr, uint8_t val) = 0;
-private:
 };
 
-class MBC0 : MBC {
+class MBC0 : public MBC {
 public:
     MBC0(vector<uint8_t>& rom, vector<uint8_t>& ram);
     uint8_t read(uint16_t addr);
@@ -24,7 +24,7 @@ private:
     vector<uint8_t> ram;
 };
 
-class MBC1 : MBC {
+class MBC1 : public MBC {
 public:
     MBC1(vector<uint8_t>& rom, vector<uint8_t>& ram);
     uint8_t read(uint16_t addr);

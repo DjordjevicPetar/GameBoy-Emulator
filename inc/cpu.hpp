@@ -1,94 +1,107 @@
-#ifndef CPU_H_
-#define CPU_H_
+#ifndef CPU_HPP_
+#define CPU_HPP_
 
-#include "../inc/constants.hpp"
-#include "../inc/instruction_decoder.hpp"
-#include "../inc/mmu.hpp"
-#include <unordered_map>
+#include "constants.hpp"
+#include "instruction_decoder.hpp"
 #include <cstdint>
+#include <string>
+#include <unordered_map>
 
 // Forward declarations
-class InstructionDecoder;
+class MMU;
 class InterruptController;
 
 class CPU {
-    // Allow InstructionDecoder to access private members
     friend class InstructionDecoder;
 
-private:
-    MMU* mmu;  // Pointer to MMU for memory access
-    InterruptController* interrupt_controller;  // Pointer to InterruptController
+public:
+    CPU(MMU* mmu, InterruptController* interrupt_controller);
     
-    uint8_t current_opcode;
-    bool IME;  // Interrupt Master Enable flag
+    uint8_t execute_next_instruction();
+    uint8_t handle_interrupts();
+    
+    bool getIME() const { return ime_; }
+    void setIME(bool value) { ime_ = value; }
+
+private:
+    // Dependencies
+    MMU* mmu_;
+    InterruptController* interrupt_controller_;
+    
+    // State
+    uint8_t current_opcode_ = 0;
+    bool ime_ = false;  // Interrupt Master Enable
 
     // Registers
-    uint16_t AF;    
-    uint16_t BC;
-    uint16_t DE;
-    uint16_t HL;
-    uint16_t SP;
-    uint16_t PC = PROGRAM_COUNTER_START;
+    uint16_t af_ = 0;
+    uint16_t bc_ = 0;
+    uint16_t de_ = 0;
+    uint16_t hl_ = 0;
+    uint16_t sp_ = 0;
+    uint16_t pc_ = PROGRAM_COUNTER_START;
 
-    // register 8-bit arguments helper functions
-    inline uint8_t read_first_register_8_bit_parameter() const;
-    inline uint8_t read_second_register_8_bit_parameter() const;
-    // register 16-bit arguments helper functions
-    inline uint8_t read_first_register_16_bit_parameter() const;
-    inline uint8_t read_second_register_16_bit_parameter() const;
-    // r8 arguments helper functions
-    uint8_t read_register_8_bit(uint8_t register_number) const;
-    void write_register_8_bit(uint8_t register_number, uint8_t value);
-    // r16 arguments helper functions
-    uint16_t read_register_16_bit(uint8_t register_number) const;
-    void write_register_16_bit(uint8_t register_number, uint16_t value);
-    // stack arguments helper functions
-    uint16_t read_register_16_bit_stack(uint8_t register_number) const;
-    void write_register_16_bit_stack(uint8_t register_number, uint16_t value);
-    // memory arguments helper functions
-    uint16_t read_register_16_bit_memory(uint8_t register_number);
-    void write_register_16_bit_memory(uint8_t register_number, uint16_t value);
-    // bit arguments helper functions
+    // Instruction handlers
+    using HandlerMap = std::unordered_map<InstructionDecoder::Op, uint8_t (CPU::*)(), InstructionDecoder::OpHash>;
+    HandlerMap op_handlers_;
+    HandlerMap cb_handlers_;
+
+    // Register access helpers - 8-bit
+    uint8_t getA() const { return (af_ >> 8) & 0xFF; }
+    uint8_t getF() const { return af_ & 0xF0; }
+    uint8_t getB() const { return (bc_ >> 8) & 0xFF; }
+    uint8_t getC() const { return bc_ & 0xFF; }
+    uint8_t getD() const { return (de_ >> 8) & 0xFF; }
+    uint8_t getE() const { return de_ & 0xFF; }
+    uint8_t getH() const { return (hl_ >> 8) & 0xFF; }
+    uint8_t getL() const { return hl_ & 0xFF; }
+    
+    void setA(uint8_t value) { af_ = (af_ & 0x00F0) | (value << 8); }
+    void setF(uint8_t value) { af_ = (af_ & 0xFF00) | (value & 0xF0); }
+    void setB(uint8_t value) { bc_ = (bc_ & 0x00FF) | (value << 8); }
+    void setC(uint8_t value) { bc_ = (bc_ & 0xFF00) | value; }
+    void setD(uint8_t value) { de_ = (de_ & 0x00FF) | (value << 8); }
+    void setE(uint8_t value) { de_ = (de_ & 0xFF00) | value; }
+    void setH(uint8_t value) { hl_ = (hl_ & 0x00FF) | (value << 8); }
+    void setL(uint8_t value) { hl_ = (hl_ & 0xFF00) | value; }
+
+    // Flag access helpers
+    uint8_t getFlagZ() const { return af_ & 0x80; }
+    uint8_t getFlagN() const { return af_ & 0x40; }
+    uint8_t getFlagH() const { return af_ & 0x20; }
+    uint8_t getFlagC() const { return af_ & 0x10; }
+    void setFlagZ(uint8_t value) { af_ = (af_ & 0xFF7F) | (value << 7); }
+    void setFlagN(uint8_t value) { af_ = (af_ & 0xFFBF) | (value << 6); }
+    void setFlagH(uint8_t value) { af_ = (af_ & 0xFFDF) | (value << 5); }
+    void setFlagC(uint8_t value) { af_ = (af_ & 0xFFEF) | (value << 4); }
+
+    // Opcode parameter decoding
+    uint8_t read_first_register_8_bit_parameter() const;
+    uint8_t read_second_register_8_bit_parameter() const;
+    uint8_t read_first_register_16_bit_parameter() const;
+    uint8_t read_second_register_16_bit_parameter() const;
     uint8_t read_bit_argument() const;
-    // condition arguments helper functions
     uint8_t read_condition_argument() const;
 
-    // 8-bit registers helper functions
-    inline uint8_t getA() const { return (AF >> 8) & 0xFF; }
-    inline uint8_t getF() const { return AF & 0xF0; }
-    inline uint8_t getB() const { return (BC >> 8) & 0xFF; }
-    inline uint8_t getC() const { return BC & 0xFF; }
-    inline uint8_t getD() const { return (DE >> 8) & 0xFF; }
-    inline uint8_t getE() const { return DE & 0xFF; }
-    inline uint8_t getH() const { return (HL >> 8) & 0xFF; }
-    inline uint8_t getL() const { return HL & 0xFF; }
-    
-    inline void setA(uint8_t value) { AF = (AF & 0x00F0) | (value << 8); }
-    inline void setF(uint8_t value) { AF = (AF & 0xFF00) | (value & 0xF0); }
-    inline void setB(uint8_t value) { BC = (BC & 0x00FF) | (value << 8); }
-    inline void setC(uint8_t value) { BC = (BC & 0xFF00) | value; }
-    inline void setD(uint8_t value) { DE = (DE & 0x00FF) | (value << 8); }
-    inline void setE(uint8_t value) { DE = (DE & 0xFF00) | value; }
-    inline void setH(uint8_t value) { HL = (HL & 0x00FF) | (value << 8); }
-    inline void setL(uint8_t value) { HL = (HL & 0xFF00) | value; }
+    // Register read/write by number
+    uint8_t read_register_8_bit(uint8_t reg_num) const;
+    void write_register_8_bit(uint8_t reg_num, uint8_t value);
+    uint16_t read_register_16_bit(uint8_t reg_num) const;
+    void write_register_16_bit(uint8_t reg_num, uint16_t value);
+    uint16_t read_register_16_bit_stack(uint8_t reg_num) const;
+    void write_register_16_bit_stack(uint8_t reg_num, uint16_t value);
+    uint16_t read_register_16_bit_memory(uint8_t reg_num);
+    void write_register_16_bit_memory(uint8_t reg_num, uint16_t value);
 
-    // Flags helper functions
-    inline uint8_t getFlagZ() const { return AF & 0x80; }
-    inline uint8_t getFlagN() const { return AF & 0x40; }
-    inline uint8_t getFlagH() const { return AF & 0x20; }
-    inline uint8_t getFlagC() const { return AF & 0x10; }
-    inline void setFlagZ(uint8_t value) { AF = (AF & 0xFF7F) | (value << 7); }
-    inline void setFlagN(uint8_t value) { AF = (AF & 0xFFBF) | (value << 6); }
-    inline void setFlagH(uint8_t value) { AF = (AF & 0xFFDF) | (value << 5); }
-    inline void setFlagC(uint8_t value) { AF = (AF & 0xFFEF) | (value << 4); }
-
-    std::unordered_map<InstructionDecoder::Op, uint8_t (CPU::*)(), InstructionDecoder::OpHash> op_handlers;
-    std::unordered_map<InstructionDecoder::Op, uint8_t (CPU::*)(), InstructionDecoder::OpHash> cb_handlers;
-
+    // Utility
     uint8_t fetchOpcode();
-    uint16_t endian_swap(uint8_t value1, uint8_t value2) const;
+    uint16_t endian_swap(uint8_t low, uint8_t high) const;
+    void log(const std::string& func_name, const std::string& details = "");
     
-    // CB prefix instruction handler
+    // Stack operations
+    void push_to_stack(uint16_t value);
+    uint16_t pop_from_stack();
+    
+    // CB prefix handler
     uint8_t cb_ins_handler();
     
     // 8-bit load instructions
@@ -120,7 +133,7 @@ private:
     uint8_t op_pop_rr();
     uint8_t op_ld_hl_sp_e();
     
-    // 8-bit arithmetic and logical instructions
+    // 8-bit arithmetic/logic
     uint8_t op_add_r();
     uint8_t op_add_hl_ind();
     uint8_t op_add_imm();
@@ -154,13 +167,13 @@ private:
     uint8_t op_daa();
     uint8_t op_cpl();
     
-    // 16-bit arithmetic instructions
+    // 16-bit arithmetic
     uint8_t op_inc_rr();
     uint8_t op_dec_rr();
     uint8_t op_add_hl_rr();
     uint8_t op_add_sp_e();
     
-    // Rotate, shift, and bit operation instructions
+    // Rotate/shift (non-CB)
     uint8_t op_rlca();
     uint8_t op_rrca();
     uint8_t op_rla();
@@ -190,7 +203,7 @@ private:
     uint8_t op_set_b_r();
     uint8_t op_set_b_hl_ind();
     
-    // Control flow instructions
+    // Control flow
     uint8_t op_jp_imm();
     uint8_t op_jp_hl();
     uint8_t op_jp_cc_imm();
@@ -203,24 +216,12 @@ private:
     uint8_t op_reti();
     uint8_t op_rst_imm();
     
-    // Miscellaneous instructions
+    // Miscellaneous
     uint8_t op_halt();
     uint8_t op_stop();
     uint8_t op_di();
     uint8_t op_ei();
     uint8_t op_nop();
-
-public:
-    CPU(MMU* mmu, InterruptController* interrupt_controller);
-    
-    // Main execution function - returns number of cycles
-    uint8_t execute_next_instruction();
-    uint8_t handle_interrupts();
-    // Getters for IME (if needed by other components)
-    bool getIME() const { return IME; }
-    void setIME(bool value) { IME = value; }
-
 };
 
 #endif
-

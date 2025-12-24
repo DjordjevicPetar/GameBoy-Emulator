@@ -1,8 +1,10 @@
-#ifndef INSTRUCTION_DECODER_H_
-#define INSTRUCTION_DECODER_H_
+#ifndef INSTRUCTION_DECODER_HPP_
+#define INSTRUCTION_DECODER_HPP_
 
+#include <cstddef>
 #include <cstdint>
 
+// Forward declaration
 class CPU;
 
 class InstructionDecoder {
@@ -12,20 +14,17 @@ public:
         uint8_t mask;
         uint8_t pattern;
 
-        Op(uint8_t mask, uint8_t pattern) {
-            this->mask = mask;
-            this->pattern = pattern;
-        }
+        Op(uint8_t m, uint8_t p) : mask(m), pattern(p) {}
 
-        bool operator==(const Op& op_second) const {
-            return this->mask == op_second.mask && this->pattern == op_second.pattern;
+        bool operator==(const Op& other) const {
+            return mask == other.mask && pattern == other.pattern;
         }
     };
 
     // Hash function for Op struct (for use in unordered_map)
     struct OpHash {
-        size_t operator()(const Op &op) const {
-            return (size_t(op.mask) << 8) | op.pattern;
+        std::size_t operator()(const Op& op) const {
+            return (static_cast<std::size_t>(op.mask) << 8) | op.pattern;
         }
     };
 
@@ -33,9 +32,7 @@ public:
     static void initializeHandlers(CPU* cpu);
     
 private:
-    // Helper method to register individual instructions
     static void registerInstructions(CPU* cpu);
-    // Helper method to register CB prefix instructions
     static void registerCbInstructions(CPU* cpu);
 };
 

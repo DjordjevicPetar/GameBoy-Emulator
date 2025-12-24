@@ -2,46 +2,38 @@
 #include "../inc/cartridge.hpp"
 #include <iostream>
 
-GameBoyEmulator* GameBoyEmulator::instance = nullptr;
+GameBoyEmulator* GameBoyEmulator::instance_ = nullptr;
 
 GameBoyEmulator::GameBoyEmulator() 
-    : mmu(),
-      cpu(&mmu, &interrupt_controller), 
-      timer(&interrupt_controller) {
-    this->stop_cpu = false;
-    this->stop_gpu = false;
-    this->cycles_executed = 0;
-}
+    : interrupt_controller_()
+    , mmu_()
+    , cpu_(&mmu_, &interrupt_controller_)
+    , timer_(&interrupt_controller_) {}
 
 GameBoyEmulator* GameBoyEmulator::getInstance() {
-    if (instance == nullptr) {
-        instance = new GameBoyEmulator();
+    if (instance_ == nullptr) {
+        instance_ = new GameBoyEmulator();
     }
-    return instance;
+    return instance_;
 }
 
 void GameBoyEmulator::setFilepath(const std::string& filepath) {
-    this->filepath = filepath;
+    filepath_ = filepath;
 }
 
 void GameBoyEmulator::emulate() {
     Cartridge cartridge;
-    cartridge.load_rom(filepath);
+    cartridge.load_rom(filepath_);
     
     // Main emulation loop
-    while (true) {
-        uint8_t cycles = cpu.execute_next_instruction();
-        cycles += cpu.handle_interrupts();
-        cycles_executed += cycles;
+    while (!stop_cpu_) {
+        uint8_t cycles = cpu_.execute_next_instruction();
+        cycles += cpu_.handle_interrupts();
+        cycles_executed_ += cycles;
         
         // Handle timer
-        timer.update_timer(cycles);
+        timer_.update_timer(cycles);
         
         // TODO: Handle GPU, Audio, etc.
-        
-        if (stop_cpu) {
-            break;
-        }
-
     }
 }

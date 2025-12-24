@@ -59,7 +59,7 @@ void Cartridge::print_rom() {
 
 
 uint8_t Cartridge::read8(uint16_t addr) const {
-    mbc->read(addr);
+    return mbc->read(addr);
 }
 
 void Cartridge::write8(uint16_t addr, uint8_t val) {

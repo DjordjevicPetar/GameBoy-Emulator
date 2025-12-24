@@ -1,11 +1,25 @@
-TARGET := .\chip8.exe
+# Detect OS
+ifeq ($(OS),Windows_NT)
+    TARGET := gameboy.exe
+    RM := del /Q
+    RUN_PREFIX :=
+else
+    TARGET := gameboy
+    RM := rm -f
+    RUN_PREFIX := ./
+endif
+
 SOURCES := $(filter-out src/mmu_main.cpp,$(wildcard src/*.cpp))
 CXX := g++
-CXXFLAGS := -std=c++17 -O2 -Wall
+CXXFLAGS := -std=c++17 -O2 -Wall -I./inc
 
-clean: 
-	if exist del $(TARGET)
+.PHONY: clean build run
+
+clean:
+	-$(RM) $(TARGET)
+
 build: clean
 	$(CXX) $(CXXFLAGS) $(SOURCES) -o $(TARGET)
+
 run: build
-	$(TARGET) $(ARGS)
+	$(RUN_PREFIX)$(TARGET) $(ARGS)
