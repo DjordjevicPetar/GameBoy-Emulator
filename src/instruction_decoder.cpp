@@ -7,12 +7,8 @@ void InstructionDecoder::initializeHandlers(CPU* cpu) {
 }
 
 void InstructionDecoder::registerInstructions(CPU* cpu) {
-    // Access op_handlers through friend class access
-    auto& handlers = cpu->op_handlers;
+    auto& handlers = cpu->op_handlers_;
     
-    // Register all instruction handlers here
-    // Op(mask, pattern) - use 0xFF mask to match exact opcode value
-    // Direct member function pointers to CPU methods
     handlers = {
         // 8-bit load instructions
         {Op(0xC0, 0x40), &CPU::op_ld_r_r},
@@ -34,6 +30,7 @@ void InstructionDecoder::registerInstructions(CPU* cpu) {
         {Op(0xFF, 0x32), &CPU::op_ld_hl_ind_dec_a},
         {Op(0xFF, 0x2A), &CPU::op_ld_a_hl_ind_inc},
         {Op(0xFF, 0x22), &CPU::op_ld_hl_ind_inc_a},
+        
         // 16-bit load instructions
         {Op(0xCF, 0x01), &CPU::op_ld_rr_imm},
         {Op(0xFF, 0x08), &CPU::op_ld_imm_ind_sp},
@@ -41,9 +38,10 @@ void InstructionDecoder::registerInstructions(CPU* cpu) {
         {Op(0xCF, 0xC5), &CPU::op_push_rr},
         {Op(0xCF, 0xC1), &CPU::op_pop_rr},
         {Op(0xFF, 0xF8), &CPU::op_ld_hl_sp_e},
-        // 8-bit arithmetic and logical instructions
+        
+        // 8-bit arithmetic/logic
         {Op(0xF8, 0x80), &CPU::op_add_r},
-        {Op(0xFF, 0x86), &CPU::op_adc_hl_ind},
+        {Op(0xFF, 0x86), &CPU::op_add_hl_ind},
         {Op(0xFF, 0xC6), &CPU::op_add_imm},
         {Op(0xF8, 0x88), &CPU::op_adc_r},
         {Op(0xFF, 0x8E), &CPU::op_adc_hl_ind},
@@ -55,8 +53,8 @@ void InstructionDecoder::registerInstructions(CPU* cpu) {
         {Op(0xFF, 0x9E), &CPU::op_sbc_hl_ind},
         {Op(0xFF, 0xDE), &CPU::op_sbc_imm},
         {Op(0xF8, 0xB8), &CPU::op_cp_r},
-        {Op(0xFF, 0xBE), &CPU::op_sbc_hl_ind},
-        {Op(0xFF, 0xFE), &CPU::op_sbc_imm},
+        {Op(0xFF, 0xBE), &CPU::op_cp_hl_ind},
+        {Op(0xFF, 0xFE), &CPU::op_cp_imm},
         {Op(0xC7, 0x04), &CPU::op_inc_r},
         {Op(0xFF, 0x34), &CPU::op_inc_hl_ind},
         {Op(0xC7, 0x05), &CPU::op_dec_r},
@@ -74,18 +72,21 @@ void InstructionDecoder::registerInstructions(CPU* cpu) {
         {Op(0xFF, 0x37), &CPU::op_scf},
         {Op(0xFF, 0x27), &CPU::op_daa},
         {Op(0xFF, 0x2F), &CPU::op_cpl},
-        // 16-bit arithmetic instructions
+        
+        // 16-bit arithmetic
         {Op(0xCF, 0x03), &CPU::op_inc_rr},
         {Op(0xCF, 0x0B), &CPU::op_dec_rr},
         {Op(0xCF, 0x09), &CPU::op_add_hl_rr},
         {Op(0xFF, 0xE8), &CPU::op_add_sp_e},
-        // Rotate, shift, and bit operation instructions
+        
+        // Rotate/shift (non-CB)
         {Op(0xFF, 0x07), &CPU::op_rlca},
         {Op(0xFF, 0x0F), &CPU::op_rrca},
         {Op(0xFF, 0x17), &CPU::op_rla},
         {Op(0xFF, 0x1F), &CPU::op_rra},
-        {Op(0xFF, 0xCB), &CPU::cb_ins_handler}, // A lot of instructions are being called with this prefix
-        // Control flow instructions
+        {Op(0xFF, 0xCB), &CPU::cb_ins_handler},
+        
+        // Control flow
         {Op(0xFF, 0xC3), &CPU::op_jp_imm},
         {Op(0xFF, 0xE9), &CPU::op_jp_hl},
         {Op(0xE7, 0xC2), &CPU::op_jp_cc_imm},
@@ -97,7 +98,8 @@ void InstructionDecoder::registerInstructions(CPU* cpu) {
         {Op(0xE7, 0xC0), &CPU::op_ret_cc},
         {Op(0xFF, 0xD9), &CPU::op_reti},
         {Op(0xC7, 0xC7), &CPU::op_rst_imm},
-        // Miscellanous instructions
+        
+        // Miscellaneous
         {Op(0xFF, 0x76), &CPU::op_halt},
         {Op(0xFF, 0x10), &CPU::op_stop},
         {Op(0xFF, 0xF3), &CPU::op_di},
@@ -107,12 +109,8 @@ void InstructionDecoder::registerInstructions(CPU* cpu) {
 }
 
 void InstructionDecoder::registerCbInstructions(CPU* cpu) {
-    // Access cb_handlers through friend class access
-    auto& handlers = cpu->cb_handlers;
+    auto& handlers = cpu->cb_handlers_;
     
-    // Register all CB prefix instruction handlers here
-    // Op(mask, pattern) - use 0xFF mask to match exact opcode value
-    // Direct member function pointers to CPU methods
     handlers = {
         {Op(0xF8, 0x00), &CPU::op_rlc_r},
         {Op(0xFF, 0x06), &CPU::op_rlc_hl_ind},
