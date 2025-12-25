@@ -1,13 +1,15 @@
 #include "../inc/mmu.hpp"
 
-MMU::MMU() {
+MMU::MMU(std::string file_path) : cartridge(file_path) {
     vram = vector<uint8_t>(VRAM_SIZE, 0);
     internal_ram = vector<uint8_t>(INTERNAL_RAM_SIZE, 0);
     sprite_attributes = vector<uint8_t>(SPRITE_ATTRIBUTES_SIZE, 0);
+
+    
 }
 
 uint8_t MMU::read_memory_8(uint16_t addr) const {
-    // ! Ovde mi puca program, kad pokrenem fetchOpcode()
+    
     if (addr <= SWITCHABLE_ROM_END) {
         return cartridge.read8(addr);
     }
@@ -35,7 +37,7 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
         if (addr >= HIGH_RAM_START) {
             // TODO
         }
-    }
+    } // TODO: Check if other intervals needed
     return 0xff; // placeholder
 }
 
@@ -43,5 +45,5 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
     if (addr <= SWITCHABLE_ROM_END) {
         cartridge.write8(addr, val);
     }
-    // TODO Timer, Interrupt Controller
+    // TODO Timer, Interrupt Controller and Everything Else
 }

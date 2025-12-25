@@ -33,9 +33,8 @@ int main(int argc, char* argv[]){
         std::cout << "Logging enabled -> cpu_log.txt" << std::endl;
     }
 
+    GameBoyEmulator::setFilepath(rom_path);
     GameBoyEmulator* emulator = GameBoyEmulator::getInstance();
-
-    emulator->setFilepath(rom_path);
 
     std::thread runningProgram(&GameBoyEmulator::emulate, emulator);
 
