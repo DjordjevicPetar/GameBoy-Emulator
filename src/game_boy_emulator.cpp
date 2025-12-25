@@ -4,9 +4,11 @@
 
 GameBoyEmulator* GameBoyEmulator::instance_ = nullptr;
 
+std::string GameBoyEmulator::filepath_ = "";
+
 GameBoyEmulator::GameBoyEmulator() 
     : interrupt_controller_()
-    , mmu_()
+    , mmu_(filepath_)
     , cpu_(&mmu_, &interrupt_controller_)
     , timer_(&interrupt_controller_) {}
 
@@ -22,8 +24,6 @@ void GameBoyEmulator::setFilepath(const std::string& filepath) {
 }
 
 void GameBoyEmulator::emulate() {
-    Cartridge cartridge;
-    cartridge.load_rom(filepath_);
     
     // Main emulation loop
     while (!stop_cpu_) {

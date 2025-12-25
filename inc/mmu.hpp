@@ -7,7 +7,7 @@
 
 class MMU {
 public:
-    MMU();
+    MMU(std::string file_path);
 
     uint8_t read_memory_8(uint16_t addr) const; // will separate based on address scope
     void write_memory_8(uint16_t addr, uint8_t val); // will separate based on address scope

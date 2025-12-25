@@ -19,7 +19,7 @@ public:
     GameBoyEmulator& operator=(GameBoyEmulator&&) = delete;
     
     void emulate();
-    void setFilepath(const std::string& filepath);
+    static void setFilepath(const std::string& filepath);
     
     static GameBoyEmulator* getInstance();
 
@@ -34,7 +34,7 @@ private:
     bool stop_cpu_ = false;
     bool stop_gpu_ = false;
     uint32_t cycles_executed_ = 0;
-    std::string filepath_;
+    static std::string filepath_;
     
     static GameBoyEmulator* instance_;
 };

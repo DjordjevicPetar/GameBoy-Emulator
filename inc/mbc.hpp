@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <iostream>
 #include "constants_mmu.hpp"
 
 using namespace std;

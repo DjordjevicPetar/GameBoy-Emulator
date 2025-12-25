@@ -1,7 +1,7 @@
 #include "../inc/cartridge.hpp"
 
-Cartridge::Cartridge() {
-    // TODO : Maybe make load_rom and parse_header private and call them here
+Cartridge::Cartridge(std::string path) {
+    load_rom(path);
 }
 
 bool Cartridge::load_rom(string path) {
@@ -17,6 +17,7 @@ bool Cartridge::load_rom(string path) {
     for (int i = 0; i < fileSize; i++) {
         rom.push_back(buffer[i]);
     }
+    parse_header();
     return true;
 }
 
@@ -48,6 +49,19 @@ void Cartridge::parse_header() {
     if (ram_banks > 0) {
         ram.resize(ram_banks * SWITCHABLE_RAM_SIZE);
     }
+
+    cartridge_type = rom[0x0147];
+
+    switch (cartridge_type) {
+        case 0x00:
+            mbc = make_unique<MBC0>(rom, ram);
+            break;
+
+        case 0x01: case 0x02: case 0x03:
+            mbc = make_unique<MBC1>(rom, ram);
+            break;
+    }
+
 }
 
 void Cartridge::print_rom() {

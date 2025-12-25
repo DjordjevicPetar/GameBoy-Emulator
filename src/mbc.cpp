@@ -31,7 +31,7 @@ void MBC0::write(uint16_t addr, uint8_t val) {
 MBC1::MBC1(vector<uint8_t>& rom, vector<uint8_t>& ram) : rom(rom), ram(ram) {
     rom_banks = rom.size() / SWITCHABLE_ROM_SIZE;
 }
-
+ 
 uint8_t MBC1::read(uint16_t addr) {
     if (addr <= STATIC_ROM_END) {
         uint8_t bank = 0;
