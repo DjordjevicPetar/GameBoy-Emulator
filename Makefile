@@ -1,7 +1,7 @@
 # Detect OS
 ifeq ($(OS),Windows_NT)
     TARGET := gameboy.exe
-    RM := del /Q
+    RM := cmd /C del /Q
     RUN_PREFIX :=
 else
     TARGET := gameboy
@@ -22,4 +22,4 @@ build: clean
 	$(CXX) $(CXXFLAGS) $(SOURCES) -o $(TARGET)
 
 run: build
-	$(RUN_PREFIX)$(TARGET) $(ARGS)
+	$(RUN_PREFIX)$(TARGET) $(ARGS) -l
