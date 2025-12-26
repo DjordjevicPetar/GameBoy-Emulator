@@ -30,6 +30,11 @@ void MBC0::write(uint16_t addr, uint8_t val) {
 
 MBC1::MBC1(vector<uint8_t>& rom, vector<uint8_t>& ram) : rom(rom), ram(ram) {
     rom_banks = rom.size() / SWITCHABLE_ROM_SIZE;
+    ram_enabled = false;
+    banking_mode = false;
+    current_rom_bank_low = 1;
+    current_rom_bank_high = 0;
+    current_ram_bank = 0;
 }
  
 uint8_t MBC1::read(uint16_t addr) {

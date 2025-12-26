@@ -14,8 +14,9 @@ public:
 private:
     Cartridge cartridge;
     vector<uint8_t> vram;
-    vector<uint8_t> internal_ram;
-    vector<uint8_t> sprite_attributes;
+    vector<uint8_t> wram;
+    vector<uint8_t> oam;
+    vector<uint8_t> hram;
 };
 
 

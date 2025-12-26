@@ -35,9 +35,8 @@ private:
     vector<uint8_t> ram;
 
     uint8_t current_rom_bank_low;
-    int rom_banks;
-
     uint8_t current_rom_bank_high;
+    int rom_banks;
 
     uint8_t current_ram_bank;
     bool ram_enabled;
