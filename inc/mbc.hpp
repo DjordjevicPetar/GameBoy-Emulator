@@ -6,8 +6,6 @@
 #include <iostream>
 #include "constants_mmu.hpp"
 
-using namespace std;
-
 class MBC {
 public:
     virtual ~MBC() = default;
@@ -17,22 +15,22 @@ public:
 
 class MBC0 : public MBC {
 public:
-    MBC0(vector<uint8_t>& rom, vector<uint8_t>& ram);
+    MBC0(std::vector<uint8_t>& rom, std::vector<uint8_t>& ram);
     uint8_t read(uint16_t addr);
     void write(uint16_t addr, uint8_t val);
 private:
-    vector<uint8_t> rom;
-    vector<uint8_t> ram;
+    std::vector<uint8_t> rom;
+    std::vector<uint8_t> ram;
 };
 
 class MBC1 : public MBC {
 public:
-    MBC1(vector<uint8_t>& rom, vector<uint8_t>& ram);
+    MBC1(std::vector<uint8_t>& rom, std::vector<uint8_t>& ram);
     uint8_t read(uint16_t addr);
     void write(uint16_t addr, uint8_t val);
 private:
-    vector<uint8_t> rom;
-    vector<uint8_t> ram;
+    std::vector<uint8_t> rom;
+    std::vector<uint8_t> ram;
 
     uint8_t current_rom_bank_low;
     uint8_t current_rom_bank_high;

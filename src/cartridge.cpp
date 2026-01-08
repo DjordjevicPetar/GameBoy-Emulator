@@ -4,15 +4,15 @@ Cartridge::Cartridge(std::string path) {
     load_rom(path);
 }
 
-bool Cartridge::load_rom(string path) {
-    ifstream file(path, ios::in | ios::binary | ios::ate);
+bool Cartridge::load_rom(std::string path) {
+    std::ifstream file(path, std::ios::in | std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
-        cerr << "Error: could not open ROM";
+        std::cerr << "Error: could not open ROM";
         return false;
     }
-    streampos fileSize = file.tellg();
-    file.seekg(0, ios::beg);
-    vector<uint8_t> buffer = vector<uint8_t>(fileSize);
+    std::streampos fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+    std::vector<uint8_t> buffer = std::vector<uint8_t>(fileSize);
     file.read(reinterpret_cast<char *>(buffer.data()), fileSize);
     for (int i = 0; i < fileSize; i++) {
         rom.push_back(buffer[i]);
@@ -54,11 +54,11 @@ void Cartridge::parse_header() {
 
     switch (cartridge_type) {
         case 0x00:
-            mbc = make_unique<MBC0>(rom, ram);
+            mbc = std::make_unique<MBC0>(rom, ram);
             break;
 
         case 0x01: case 0x02: case 0x03:
-            mbc = make_unique<MBC1>(rom, ram);
+            mbc = std::make_unique<MBC1>(rom, ram);
             break;
     }
 
@@ -66,9 +66,9 @@ void Cartridge::parse_header() {
 
 void Cartridge::print_rom() {
     for (size_t i = 0; i < rom.size(); i++) {
-        cout << hex << setw(2) << setfill('0') << (int)rom[i];
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)rom[i];
     }
-    cout << dec;
+    std::cout << std::dec;
 }
 
 

@@ -1,57 +1,69 @@
 #ifndef _CONSTANTS_MMU_HPP_
 #define _CONSTANTS_MMU_HPP_
 
-#define STATIC_ROM_START 0x0000
-#define STATIC_ROM_END 0x3fff
-#define STATIC_ROM_SIZE 0x4000
+// ROM Regions
+static const uint16_t STATIC_ROM_START = 0x0000;
+static const uint16_t STATIC_ROM_END = 0x3FFF;
+static const uint16_t STATIC_ROM_SIZE = 0x4000;
 
-#define SWITCHABLE_ROM_START 0x4000
-#define SWITCHABLE_ROM_END 0x7fff
-#define SWITCHABLE_ROM_SIZE 0x4000
+static const uint16_t SWITCHABLE_ROM_START = 0x4000;
+static const uint16_t SWITCHABLE_ROM_END = 0x7FFF;
+static const uint16_t SWITCHABLE_ROM_SIZE = 0x4000;
 
-#define VRAM_START 0x8000
-#define VRAM_END 0x9fff
-#define VRAM_SIZE 0x2000
+// VRAM
+static const uint16_t VRAM_START = 0x8000;
+static const uint16_t VRAM_END = 0x9FFF;
+static const uint16_t VRAM_SIZE = 0x2000;
 
-#define SWITCHABLE_RAM_START 0xa000
-#define SWITCHABLE_RAM_END 0xbfff
-#define SWITCHABLE_RAM_SIZE 0x2000
+// External (Switchable) RAM
+static const uint16_t SWITCHABLE_RAM_START = 0xA000;
+static const uint16_t SWITCHABLE_RAM_END = 0xBFFF;
+static const uint16_t SWITCHABLE_RAM_SIZE = 0x2000;
 
-#define INTERNAL_RAM_START 0xc000
-#define INTERNAL_RAM_END 0xdfff
-#define INTERNAL_RAM_SIZE 0x2000
+// Internal RAM
+static const uint16_t INTERNAL_RAM_START = 0xC000;
+static const uint16_t INTERNAL_RAM_END = 0xDFFF;
+static const uint16_t INTERNAL_RAM_SIZE = 0x2000;
 
-#define SPRITE_ATTRIBUTES_START 0xfe00
-#define SPRITE_ATTRIBUTES_END 0xfe9f
-#define SPRITE_ATTRIBUTES_SIZE 0xa0
+// Sprite Attribute Table (OAM)
+static const uint16_t SPRITE_ATTRIBUTES_START = 0xFE00;
+static const uint16_t SPRITE_ATTRIBUTES_END = 0xFE9F;
+static const uint16_t SPRITE_ATTRIBUTES_SIZE = 0x00A0;
 
-#define I_O_START 0xff00
-#define I_O_END 0xff4b
-#define I_O_SIZE 0x4c
+// I/O Registers
+static const uint16_t IO_START = 0xFF00;
+static const uint16_t IO_END = 0xFF4B;
+static const uint16_t IO_SIZE = 0x004C;
 
-#define HIGH_RAM_START 0xff80
-#define HIGH_RAM_END 0xfffe
-#define HIGH_RAM_SIZE 0x7f
+// High RAM
+static const uint16_t HIGH_RAM_START = 0xFF80;
+static const uint16_t HIGH_RAM_END = 0xFFFE;
+static const uint16_t HIGH_RAM_SIZE = 0x007F;
 
-#define INTERRUPT_REGISTER_ADDR 0xffff
+// Interrupt Register
+static const uint16_t INTERRUPT_REGISTER_ADDR = 0xFFFF;
 
-#define RAM_ENABLE_START 0x0000
-#define RAM_ENABLE_END 0x1fff
-#define ROM_BANK_SELECT_START 0x2000
-#define ROM_BANK_SELECT_END 0x3fff
-#define RAM_BANK_SELECT_START 0x4000
-#define RAM_BANK_SELECT_END 0x5fff
-#define BANKING_MODE_START 0x6000
-#define BANKING_MODE_END 0x7fff
+// MBC1 Control Ranges
+static const uint16_t RAM_ENABLE_START = 0x0000;
+static const uint16_t RAM_ENABLE_END = 0x1FFF;
+static const uint16_t ROM_BANK_SELECT_START = 0x2000;
+static const uint16_t ROM_BANK_SELECT_END = 0x3FFF;
+static const uint16_t RAM_BANK_SELECT_START = 0x4000;
+static const uint16_t RAM_BANK_SELECT_END = 0x5FFF;
+static const uint16_t BANKING_MODE_START = 0x6000;
+static const uint16_t BANKING_MODE_END = 0x7FFF;
 
-#define HEADER_ROM_SIZE_ADDR 0x0148
-#define HEADER_RAM_SIZE_ADDR 0x0149
+// ROM Header Offsets
+static const uint16_t HEADER_ROM_SIZE_ADDR = 0x0148;
+static const uint16_t HEADER_RAM_SIZE_ADDR = 0x0149;
 
-#define DEFAULT_READ_RETURN 0xff
+// Defaults
+static const uint8_t DEFAULT_READ_RETURN = 0xFF;
 
-#define MBC1_ROM_BANKS_MASK 0x1f
-#define MBC1_RAM_BANKS_MASK 0x03
-#define MBC1_RAM_ENABLE_MASK 0x0f
-#define MBC1_RAM_ENABLE_ENABLED 0x0a
+// MBC1 Masks
+static const uint8_t MBC1_ROM_BANKS_MASK = 0x1F;
+static const uint8_t MBC1_RAM_BANKS_MASK = 0x03;
+static const uint8_t MBC1_RAM_ENABLE_MASK = 0x0F;
+static const uint8_t MBC1_RAM_ENABLE_ENABLED = 0x0A;
 
 #endif

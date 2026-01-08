@@ -13,10 +13,10 @@ public:
     void write_memory_8(uint16_t addr, uint8_t val); // will separate based on address scope
 private:
     Cartridge cartridge;
-    vector<uint8_t> vram;
-    vector<uint8_t> wram;
-    vector<uint8_t> oam;
-    vector<uint8_t> hram;
+    std::vector<uint8_t> vram;
+    std::vector<uint8_t> wram;
+    std::vector<uint8_t> oam;
+    std::vector<uint8_t> hram;
 };
 
 
