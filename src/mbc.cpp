@@ -1,6 +1,6 @@
 #include "../inc/mbc.hpp"
 
-MBC0::MBC0(vector<uint8_t>& rom, vector<uint8_t>& ram) : rom(rom), ram(ram) {}
+MBC0::MBC0(std::vector<uint8_t>& rom, std::vector<uint8_t>& ram) : rom(rom), ram(ram) {}
 
 uint8_t MBC0::read(uint16_t addr) { // 2 ROM banks
     if (addr <= SWITCHABLE_ROM_END) {
@@ -28,7 +28,7 @@ void MBC0::write(uint16_t addr, uint8_t val) {
     }
 }
 
-MBC1::MBC1(vector<uint8_t>& rom, vector<uint8_t>& ram) : rom(rom), ram(ram) {
+MBC1::MBC1(std::vector<uint8_t>& rom, std::vector<uint8_t>& ram) : rom(rom), ram(ram) {
     rom_banks = rom.size() / SWITCHABLE_ROM_SIZE;
     ram_enabled = false;
     banking_mode = false;
