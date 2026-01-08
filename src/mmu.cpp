@@ -27,8 +27,8 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
             return oam[addr - SPRITE_ATTRIBUTES_START]; // TODO
         }
     }
-    else if (addr <= I_O_END) {
-        if (addr >= I_O_START) {
+    else if (addr <= IO_END) {
+        if (addr >= IO_START) {
             // TODO Timer, Interrupt Controller
         }
     }
@@ -61,8 +61,8 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
             oam[addr - SPRITE_ATTRIBUTES_START] = val; // TODO
         }
     }
-    else if (addr <= I_O_END) {
-        if (addr >= I_O_START) {
+    else if (addr <= IO_END) {
+        if (addr >= IO_START) {
             // TODO Timer, Interrupt Controller
         }
     }
