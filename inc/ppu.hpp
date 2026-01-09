@@ -1,7 +1,52 @@
 #ifndef _PPU_HPP_
 #define _PPU_HPP_
 
+#include <cstdint>
+#include <vector>
+#include "constants_mmu.hpp"
+
+enum PPUMode {
+    HBlank, VBlank, OAM, DRAW
+};
+
 class PPU {
+public:
+    PPU();
+    void reset();
+    void step(uint8_t cycles);
+
+    uint8_t read(uint16_t addr) const;
+    void write(uint16_t addr, uint8_t val);
+
+    // TODO: method for acquiring the current framebuffer data
+
+private:
+    uint8_t mode;
+    uint8_t ly;
+    int cycle_counter;
+
+    std::vector<std::vector<uint32_t>> framebuffer;
+
+    std::vector<uint8_t> vram;
+    std::vector<uint8_t> oam;
+
+    void render_scanline();
+
+    void render_background();
+    void render_window();
+    void render_sprites();
+
+    uint8_t lcdc;
+    uint8_t stat;
+    uint8_t scy;
+    uint8_t scx;
+    uint8_t ly;
+    uint8_t lyc;
+    uint8_t bgp;
+    uint8_t obp0;
+    uint8_t obp1;
+    uint8_t wy;
+    uint8_t wx;
 
 };
 

@@ -3,6 +3,7 @@
 
 #include "constants_mmu.hpp"
 #include "cartridge.hpp"
+#include "ppu.hpp"
 #include <cstdint>
 
 class MMU {
@@ -13,9 +14,9 @@ public:
     void write_memory_8(uint16_t addr, uint8_t val); // will separate based on address scope
 private:
     Cartridge cartridge;
-    std::vector<uint8_t> vram;
+    PPU ppu;
+
     std::vector<uint8_t> wram;
-    std::vector<uint8_t> oam;
     std::vector<uint8_t> hram;
 };
 

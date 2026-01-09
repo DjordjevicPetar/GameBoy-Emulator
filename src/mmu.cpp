@@ -2,9 +2,8 @@
 
 MMU::MMU(std::string file_path)
     : cartridge(file_path),
-      vram(VRAM_SIZE, 0),
+      ppu(),
       wram(INTERNAL_RAM_SIZE, 0),
-      oam(SPRITE_ATTRIBUTES_SIZE, 0),
       hram(HIGH_RAM_SIZE, 0)
     {}
 
@@ -14,7 +13,7 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
         return cartridge.read8(addr);
     }
     else if (addr <= VRAM_END) {
-        return vram[addr - VRAM_START]; // TODO
+        return ppu.read(addr);
     }
     else if (addr <= SWITCHABLE_RAM_END) {
         return cartridge.read8(addr);
@@ -22,14 +21,14 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
     else if (addr <= INTERNAL_RAM_END) {
         return wram[addr - INTERNAL_RAM_START];
     }
-    else if (addr <= SPRITE_ATTRIBUTES_END) {
-        if (addr >= SPRITE_ATTRIBUTES_START) {
-            return oam[addr - SPRITE_ATTRIBUTES_START]; // TODO
+    else if (addr <= OAM_END) {
+        if (addr >= OAM_START) {
+            return ppu.read(addr);
         }
     }
     else if (addr <= IO_END) {
         if (addr >= IO_START) {
-            // TODO Timer, Interrupt Controller
+            // TODO Timer, Interrupt Controller, PPU registers
         }
     }
     else if (addr <= HIGH_RAM_END) {
@@ -48,7 +47,7 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
         cartridge.write8(addr, val);
     }
     else if (addr <= VRAM_END) {
-        vram[addr - VRAM_START] = val; // TODO
+        ppu.write(addr, val);
     }
     else if (addr <= SWITCHABLE_RAM_END) {
         cartridge.write8(addr, val);
@@ -56,14 +55,14 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
     else if (addr <= INTERNAL_RAM_END) {
         wram[addr - INTERNAL_RAM_START] = val;
     }
-    else if (addr <= SPRITE_ATTRIBUTES_END) {
-        if (addr >= SPRITE_ATTRIBUTES_START) {
-            oam[addr - SPRITE_ATTRIBUTES_START] = val; // TODO
+    else if (addr <= OAM_END) {
+        if (addr >= OAM_START) {
+            ppu.write(addr, val);
         }
     }
     else if (addr <= IO_END) {
         if (addr >= IO_START) {
-            // TODO Timer, Interrupt Controller
+            // TODO Timer, Interrupt Controller, PPU registers
         }
     }
     else if (addr <= HIGH_RAM_END) {

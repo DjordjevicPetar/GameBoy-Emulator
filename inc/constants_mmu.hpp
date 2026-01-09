@@ -26,9 +26,9 @@ static const uint16_t INTERNAL_RAM_END = 0xDFFF;
 static const uint16_t INTERNAL_RAM_SIZE = 0x2000;
 
 // Sprite Attribute Table (OAM)
-static const uint16_t SPRITE_ATTRIBUTES_START = 0xFE00;
-static const uint16_t SPRITE_ATTRIBUTES_END = 0xFE9F;
-static const uint16_t SPRITE_ATTRIBUTES_SIZE = 0x00A0;
+static const uint16_t OAM_START = 0xFE00;
+static const uint16_t OAM_END = 0xFE9F;
+static const uint16_t OAM_SIZE = 0x00A0;
 
 // I/O Registers
 static const uint16_t IO_START = 0xFF00;
@@ -65,5 +65,23 @@ static const uint8_t MBC1_ROM_BANKS_MASK = 0x1F;
 static const uint8_t MBC1_RAM_BANKS_MASK = 0x03;
 static const uint8_t MBC1_RAM_ENABLE_MASK = 0x0F;
 static const uint8_t MBC1_RAM_ENABLE_ENABLED = 0x0A;
+
+// LCD Dimensions
+static const uint8_t LCD_WIDTH = 160;
+static const uint8_t LCD_HEIGHT = 144;
+
+// PPU registers
+static const uint16_t LCDC_ADDR = 0xFF40;
+static const uint16_t STAT_ADDR = 0xFF41;
+static const uint16_t SCY_ADDR = 0xFF42;
+static const uint16_t SCX_ADDR = 0xFF43;
+static const uint16_t LY_ADDR = 0xFF44;
+static const uint16_t LYC_ADDR = 0xFF45;
+static const uint16_t DMA_ADDR = 0xFF46;
+static const uint16_t BGP_ADDR = 0xFF47;
+static const uint16_t OBP0_ADDR = 0xFF48;
+static const uint16_t OBP1_ADDR = 0xFF49;
+static const uint16_t WY_ADDR = 0xFF4A;
+static const uint16_t WX_ADDR = 0xFF4B;
 
 #endif
