@@ -4,17 +4,19 @@
 #include "constants_mmu.hpp"
 #include "cartridge.hpp"
 #include "ppu.hpp"
+#include "timer.hpp"
 #include <cstdint>
 
 class MMU {
 public:
     MMU(std::string file_path);
 
-    uint8_t read_memory_8(uint16_t addr) const; // will separate based on address scope
-    void write_memory_8(uint16_t addr, uint8_t val); // will separate based on address scope
+    uint8_t read_memory_8(uint16_t addr) const;
+    void write_memory_8(uint16_t addr, uint8_t val);
 private:
     Cartridge cartridge;
     PPU ppu;
+    // TODO: Timer timer, but cannot do now, must see how the constructor is implemented.
 
     std::vector<uint8_t> wram;
     std::vector<uint8_t> hram;

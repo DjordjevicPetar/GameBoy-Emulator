@@ -28,7 +28,13 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
     }
     else if (addr <= IO_END) {
         if (addr >= IO_START) {
-            // TODO Timer, Interrupt Controller, PPU registers
+            if (addr >= TIMER_REGS_START && addr <= TIMER_REGS_END) {
+                // Call timer.read
+            }
+            else if (addr >= PPU_REGS_START && addr <= PPU_REGS_END) {
+                return ppu.read(addr);
+            }
+            // TODO Other scopes (Interrupt Controller, etc)
         }
     }
     else if (addr <= HIGH_RAM_END) {
@@ -47,6 +53,7 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
         cartridge.write8(addr, val);
     }
     else if (addr <= VRAM_END) {
+        // TODO: Don't allow if mode == DRAW
         ppu.write(addr, val);
     }
     else if (addr <= SWITCHABLE_RAM_END) {
@@ -62,7 +69,13 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
     }
     else if (addr <= IO_END) {
         if (addr >= IO_START) {
-            // TODO Timer, Interrupt Controller, PPU registers
+            if (addr >= TIMER_REGS_START && addr <= TIMER_REGS_END) {
+                // Call timer.write
+            }
+            else if (addr >= PPU_REGS_START && addr <= PPU_REGS_END) {
+                return ppu.write(addr, val);
+            }
+            // TODO Other scopes (Interrupt Controller, etc)
         }
     }
     else if (addr <= HIGH_RAM_END) {

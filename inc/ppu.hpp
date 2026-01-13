@@ -18,7 +18,7 @@ public:
     uint8_t read(uint16_t addr) const;
     void write(uint16_t addr, uint8_t val);
 
-    // TODO: method for acquiring the current framebuffer data
+    const std::vector<std::vector<uint32_t>>& get_framebuffer() const;
 
 private:
     uint8_t mode;
