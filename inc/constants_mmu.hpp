@@ -35,6 +35,14 @@ static const uint16_t IO_START = 0xFF00;
 static const uint16_t IO_END = 0xFF4B;
 static const uint16_t IO_SIZE = 0x004C;
 
+// Timer Address Range
+static const uint16_t TIMER_REGS_START = 0xFF04;
+static const uint16_t TIMER_REGS_END = 0xFF07;
+
+// PPU Registers Address Range
+static const uint16_t PPU_REGS_START = 0xFF40;
+static const uint16_t PPU_REGS_END = 0xFF4B;
+
 // High RAM
 static const uint16_t HIGH_RAM_START = 0xFF80;
 static const uint16_t HIGH_RAM_END = 0xFFFE;
@@ -70,6 +78,11 @@ static const uint8_t MBC1_RAM_ENABLE_ENABLED = 0x0A;
 static const uint8_t LCD_WIDTH = 160;
 static const uint8_t LCD_HEIGHT = 144;
 
+// Tile Data Address Range
+static const uint16_t TILE_DATA_START = 0x8000;
+static const uint16_t TILE_DATA_END = 0x97FF;
+static const uint16_t TILE_DATA_SIZE = 0x1800;
+
 // PPU registers
 static const uint16_t LCDC_ADDR = 0xFF40;
 static const uint16_t STAT_ADDR = 0xFF41;
@@ -83,5 +96,15 @@ static const uint16_t OBP0_ADDR = 0xFF48;
 static const uint16_t OBP1_ADDR = 0xFF49;
 static const uint16_t WY_ADDR = 0xFF4A;
 static const uint16_t WX_ADDR = 0xFF4B;
+
+// PPU Modes Cycles
+static const uint16_t PPU_OAM_CYCLES = 80;
+static const uint16_t PPU_DRAW_CYCLES = 172; // Might change, didn't find an exact value for it
+static const uint16_t PPU_FULL_LINE_CYCLES = 456;
+static const uint16_t PPU_HBLANK_CYCLES = PPU_FULL_LINE_CYCLES - PPU_DRAW_CYCLES - PPU_OAM_CYCLES;
+
+// PPU VBlank Important Lines
+static const uint16_t PPU_VBLANK_FIRST_LINE = 144;
+static const uint16_t PPU_VBLANK_LAST_LINE = 153;
 
 #endif
