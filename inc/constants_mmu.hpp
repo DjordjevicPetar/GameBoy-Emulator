@@ -107,4 +107,37 @@ static const uint16_t PPU_HBLANK_CYCLES = PPU_FULL_LINE_CYCLES - PPU_DRAW_CYCLES
 static const uint16_t PPU_VBLANK_FIRST_LINE = 144;
 static const uint16_t PPU_VBLANK_LAST_LINE = 153;
 
+// PPU Background Important Addresses
+static const uint16_t BACKGROUND_TILE_MAP0_START = 0x9800;
+static const uint16_t BACKGROUND_TILE_MAP0_END = 0x9BFF;
+
+static const uint16_t BACKGROUND_TILE_MAP1_START = 0x9C00;
+static const uint16_t BACKGROUND_TILE_MAP1_END = 0x9FFF;
+
+// PPU STAT Masks
+static const uint16_t STAT_READ_ONLY_MASK = 0x07;
+static const uint16_t STAT_READ_WRITE_MASK = 0x78;
+static const uint16_t STAT_MODE_MASK = 0x03;
+
+static const uint16_t STAT_LY_COMPARE_TRUE = 0x04;
+static const uint16_t STAT_LY_COMPARE_FALSE = 0x00;
+
+// PPU LCDC Masks
+static const uint16_t LCDC_BG_AND_WND_ENABLE_MASK = 0x01;
+static const uint16_t LCDC_OBJ_ENABLE_MASK = 0x02;
+static const uint16_t LCDC_OBJ_SIZE_MASK = 0x04;
+static const uint16_t LCDC_BG_TILE_MAP_AREA_MASK = 0x08;
+static const uint16_t LCDC_BG_AND_WND_TILE_DATA_AREA_MASK = 0x10;
+static const uint16_t LCDC_WND_ENABLE_MASK = 0x20;
+static const uint16_t LCDC_WND_TILE_MAP_AREA_MASK = 0x40;
+static const uint16_t LCDC_PPU_ENABLE_MASK = 0x80;
+
+// PPU Pallete Colors
+static const uint8_t PALLETE_SIZE = 4;
+static const uint32_t PPU_WHITE = 0xFFFFFFFF;
+static const uint32_t PPU_LIGHT_GRAY = 0xFFAAAAAA;
+static const uint32_t PPU_DARK_GRAY = 0xFF555555;
+static const uint32_t PPU_BLACK = 0xFF000000;
+
+
 #endif

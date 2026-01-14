@@ -26,6 +26,7 @@ private:
     int cycle_counter;
 
     std::vector<std::vector<uint32_t>> framebuffer;
+    std::vector<uint32_t> pallete;
 
     std::vector<uint8_t> vram;
     std::vector<uint8_t> oam;
@@ -48,6 +49,7 @@ private:
     uint8_t wy;
     uint8_t wx;
 
+    std::vector<uint32_t> line;
 };
 
 #endif
