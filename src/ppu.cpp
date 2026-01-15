@@ -3,11 +3,17 @@
 PPU::PPU() :
     framebuffer(LCD_HEIGHT, std::vector<uint32_t>(LCD_WIDTH, 0)),
     vram(VRAM_SIZE),
-    oam(OAM_SIZE)
+    oam(OAM_SIZE),
+    pallete(PALLETE_SIZE)
 {
     mode = OAM;
     ly = 0;
     cycle_counter = 0;
+
+    pallete[0] = PPU_WHITE;
+    pallete[1] = PPU_LIGHT_GRAY;
+    pallete[2] = PPU_DARK_GRAY;
+    pallete[3] = PPU_BLACK;
 }
 
 void PPU::reset() {
@@ -36,7 +42,7 @@ uint8_t PPU::read(uint16_t addr) const {
     }
     switch (addr) {
         case LCDC_ADDR: return lcdc;
-        case STAT_ADDR: return (stat & 0x78) | (lyc == ly ? 0x04 : 0x00) | (mode & 0x03);
+        case STAT_ADDR: return (stat & STAT_READ_WRITE_MASK) | (lyc == ly ? STAT_LY_COMPARE_TRUE : STAT_LY_COMPARE_FALSE) | (mode & STAT_MODE_MASK);
         case SCY_ADDR: return scy;
         case SCX_ADDR: return scx;
         case LY_ADDR: return ly;
@@ -64,8 +70,8 @@ void PPU::write(uint16_t addr, uint8_t val) {
     }
     switch (addr) {
         case LCDC_ADDR:
-            bool lcd_enable_prev = lcdc & 0x80;
-            bool lcd_enable_new = val & 0x80;
+            bool lcd_enable_prev = lcdc & LCDC_PPU_ENABLE_MASK;
+            bool lcd_enable_new = val & LCDC_PPU_ENABLE_MASK;
 
             lcdc = val;
             if (lcd_enable_prev && !lcd_enable_new) {
@@ -81,7 +87,7 @@ void PPU::write(uint16_t addr, uint8_t val) {
             }
             return;
         case STAT_ADDR:
-            stat = (stat & 0x07) | (val & 0x78);
+            stat = (stat & STAT_READ_ONLY_MASK) | (val & STAT_READ_WRITE_MASK);
             return;
         case SCY_ADDR:
             scy = val;
@@ -154,5 +160,60 @@ void PPU::step(uint8_t cycles) {
     }
 
     // stat bits update
-    stat = (stat & 0x78) | (lyc == ly ? 0x04 : 0x00) | (mode & 0x03);
+    stat = (stat & STAT_READ_WRITE_MASK) | (lyc == ly ? STAT_LY_COMPARE_TRUE : STAT_LY_COMPARE_FALSE) | (mode & STAT_MODE_MASK);
+}
+
+void PPU::render_scanline() {
+    render_background();
+    render_window();
+    render_sprites();
+
+    framebuffer[ly] = line;
+}
+
+void PPU::render_background() {
+    if (!(lcdc & LCDC_BG_AND_WND_ENABLE_MASK)) return; // Background and Window disabled
+    uint16_t tile_map_base = (lcdc & LCDC_BG_TILE_MAP_AREA_MASK) ? BACKGROUND_TILE_MAP1_START : BACKGROUND_TILE_MAP0_START;
+
+    uint8_t bg_y = (scy + ly) % 256;
+    uint8_t tile_row = bg_y / 8;
+    uint8_t tile_row_pixel = bg_y % 8;
+
+    uint16_t tile_addr;
+
+    for (uint8_t offset = 0; offset < LCD_WIDTH; offset++) {
+        uint8_t bg_x = (scx + offset) % 256;
+        uint8_t tile_col = bg_x / 8;
+        uint8_t tile_col_pixel = bg_x % 8;
+
+        uint8_t tile_id = vram[tile_map_base - VRAM_START + tile_row * 32 + tile_col];
+
+        if (lcdc & LCDC_BG_AND_WND_TILE_DATA_AREA_MASK) {
+            uint16_t tile_data_base = 0x8000;
+            tile_addr = tile_data_base + tile_id * 16;
+        }
+        else {
+            uint16_t tile_data_base = 0x9000;
+            tile_addr = tile_data_base + (int8_t)tile_id * 16;
+        }
+
+        uint8_t byte0 = vram[tile_addr - VRAM_START + tile_row_pixel * 2];
+        uint8_t byte1 = vram[tile_addr - VRAM_START + tile_row_pixel * 2 + 1];
+
+        uint8_t bit_index = 7 - tile_col_pixel;
+        uint8_t bit0 = (byte0 >> bit_index) & 1;
+        uint8_t bit1 = (byte1 >> bit_index) & 1;
+
+        uint8_t color_id = (bit0 & 1) << 1 | (bit1 & 1);
+
+        line[offset] = pallete[color_id];
+    }
+}
+
+void PPU::render_window() {
+    // TODO
+}
+
+void PPU::render_sprites() {
+    // TODO
 }
