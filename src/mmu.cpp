@@ -39,7 +39,7 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
     }
     else if (addr <= HIGH_RAM_END) {
         if (addr >= HIGH_RAM_START) {
-            return hram[addr - HIGH_RAM_START]; // TODO
+            return hram[addr - HIGH_RAM_START];
         }
     }
     else if (addr == INTERRUPT_REGISTER_ADDR) {
@@ -53,7 +53,6 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
         cartridge.write8(addr, val);
     }
     else if (addr <= VRAM_END) {
-        // TODO: Don't allow if mode == DRAW
         ppu.write(addr, val);
     }
     else if (addr <= SWITCHABLE_RAM_END) {
@@ -80,7 +79,7 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
     }
     else if (addr <= HIGH_RAM_END) {
         if (addr >= HIGH_RAM_START) {
-            hram[addr - HIGH_RAM_START] = val; // TODO
+            hram[addr - HIGH_RAM_START] = val;
         }
     }
     else if (addr == INTERRUPT_REGISTER_ADDR) {
