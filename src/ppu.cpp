@@ -4,16 +4,16 @@ PPU::PPU() :
     framebuffer(LCD_HEIGHT, std::vector<uint32_t>(LCD_WIDTH, 0)),
     vram(VRAM_SIZE),
     oam(OAM_SIZE),
-    pallete(PALLETE_SIZE)
+    palette(PALETTE_SIZE)
 {
     mode = OAM;
     ly = 0;
     cycle_counter = 0;
 
-    pallete[0] = PPU_WHITE;
-    pallete[1] = PPU_LIGHT_GRAY;
-    pallete[2] = PPU_DARK_GRAY;
-    pallete[3] = PPU_BLACK;
+    palette[0] = PPU_WHITE;
+    palette[1] = PPU_LIGHT_GRAY;
+    palette[2] = PPU_DARK_GRAY;
+    palette[3] = PPU_BLACK;
 }
 
 void PPU::reset() {
@@ -206,7 +206,7 @@ void PPU::render_background() {
 
         uint8_t color_id = (bit1 & 1) << 1 | (bit0 & 1);
 
-        line[x] = pallete[color_id];
+        line[x] = palette[color_id];
     }
 }
 
@@ -254,7 +254,7 @@ void PPU::render_window() {
 
         uint8_t color_id = (bit1 & 1) << 1 | (bit0 & 1);
 
-        line[x] = pallete[color_id];
+        line[x] = palette[color_id];
     }
 }
 

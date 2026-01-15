@@ -132,8 +132,8 @@ static const uint16_t LCDC_WIN_ENABLE_MASK = 0x20;
 static const uint16_t LCDC_WIN_TILE_MAP_AREA_MASK = 0x40;
 static const uint16_t LCDC_PPU_ENABLE_MASK = 0x80;
 
-// PPU Pallete Colors
-static const uint8_t PALLETE_SIZE = 4;
+// PPU Palette Colors
+static const uint8_t PALETTE_SIZE = 4;
 static const uint32_t PPU_WHITE = 0xFFFFFFFF;
 static const uint32_t PPU_LIGHT_GRAY = 0xFFAAAAAA;
 static const uint32_t PPU_DARK_GRAY = 0xFF555555;
