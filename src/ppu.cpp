@@ -172,7 +172,7 @@ void PPU::render_scanline() {
 }
 
 void PPU::render_background() {
-    if (!(lcdc & LCDC_BG_AND_WND_ENABLE_MASK)) return; // Background and Window disabled
+    if (!(lcdc & LCDC_BG_AND_WIN_ENABLE_MASK)) return; // Background disabled
     uint16_t tile_map_base = (lcdc & LCDC_BG_TILE_MAP_AREA_MASK) ? BACKGROUND_TILE_MAP1_START : BACKGROUND_TILE_MAP0_START;
 
     uint8_t bg_y = (scy + ly) % 256;
@@ -181,14 +181,14 @@ void PPU::render_background() {
 
     uint16_t tile_addr;
 
-    for (uint8_t offset = 0; offset < LCD_WIDTH; offset++) {
-        uint8_t bg_x = (scx + offset) % 256;
+    for (uint8_t x = 0; x < LCD_WIDTH; x++) {
+        uint8_t bg_x = (scx + x) % 256;
         uint8_t tile_col = bg_x / 8;
         uint8_t tile_col_pixel = bg_x % 8;
 
         uint8_t tile_id = vram[tile_map_base - VRAM_START + tile_row * 32 + tile_col];
 
-        if (lcdc & LCDC_BG_AND_WND_TILE_DATA_AREA_MASK) {
+        if (lcdc & LCDC_BG_AND_WIN_TILE_DATA_AREA_MASK) {
             uint16_t tile_data_base = 0x8000;
             tile_addr = tile_data_base + tile_id * 16;
         }
@@ -204,14 +204,58 @@ void PPU::render_background() {
         uint8_t bit0 = (byte0 >> bit_index) & 1;
         uint8_t bit1 = (byte1 >> bit_index) & 1;
 
-        uint8_t color_id = (bit0 & 1) << 1 | (bit1 & 1);
+        uint8_t color_id = (bit1 & 1) << 1 | (bit0 & 1);
 
-        line[offset] = pallete[color_id];
+        line[x] = pallete[color_id];
     }
 }
 
 void PPU::render_window() {
-    // TODO
+    if (!(lcdc & LCDC_BG_AND_WIN_ENABLE_MASK)) return; // Background and Window disabled
+    if (!(lcdc & LCDC_WIN_ENABLE_MASK)) return; // Window disabled
+    if (ly < wy) return; // Didn't get to the starting point yet
+
+    uint16_t tile_map_base = (lcdc & LCDC_WIN_TILE_MAP_AREA_MASK) ? BACKGROUND_TILE_MAP1_START : BACKGROUND_TILE_MAP0_START;
+    
+    uint8_t win_y = ly - wy;
+    uint8_t tile_row = win_y / 8;
+    uint8_t tile_row_pixel = win_y % 8;
+
+    int x_coord_start = wx - 7;
+
+    uint16_t tile_addr;
+
+    for (int x = 0; x < LCD_WIDTH; x++) {
+        uint8_t win_x = x - (wx - 7);
+
+        if (win_x < 0) continue;
+        if (win_x >= 160) break;
+
+        uint8_t tile_col = win_x / 8;
+        uint8_t tile_col_pixel = win_x % 8;
+
+        uint8_t tile_id = vram[tile_map_base - VRAM_START + tile_row * 32 + tile_col];
+
+        if (lcdc & LCDC_BG_AND_WIN_TILE_DATA_AREA_MASK) {
+            uint16_t tile_data_base = 0x8000;
+            tile_addr = tile_data_base + tile_id * 16;
+        }
+        else {
+            uint16_t tile_data_base = 0x9000;
+            tile_addr = tile_data_base + (int8_t)tile_id * 16;
+        }
+
+        uint8_t byte0 = vram[tile_addr - VRAM_START + tile_row_pixel * 2];
+        uint8_t byte1 = vram[tile_addr - VRAM_START + tile_row_pixel * 2 + 1];
+
+        uint8_t bit_index = 7 - tile_col_pixel;
+        uint8_t bit0 = (byte0 >> bit_index) & 1;
+        uint8_t bit1 = (byte1 >> bit_index) & 1;
+
+        uint8_t color_id = (bit1 & 1) << 1 | (bit0 & 1);
+
+        line[x] = pallete[color_id];
+    }
 }
 
 void PPU::render_sprites() {

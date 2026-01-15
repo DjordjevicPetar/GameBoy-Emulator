@@ -123,13 +123,13 @@ static const uint16_t STAT_LY_COMPARE_TRUE = 0x04;
 static const uint16_t STAT_LY_COMPARE_FALSE = 0x00;
 
 // PPU LCDC Masks
-static const uint16_t LCDC_BG_AND_WND_ENABLE_MASK = 0x01;
+static const uint16_t LCDC_BG_AND_WIN_ENABLE_MASK = 0x01;
 static const uint16_t LCDC_OBJ_ENABLE_MASK = 0x02;
 static const uint16_t LCDC_OBJ_SIZE_MASK = 0x04;
 static const uint16_t LCDC_BG_TILE_MAP_AREA_MASK = 0x08;
-static const uint16_t LCDC_BG_AND_WND_TILE_DATA_AREA_MASK = 0x10;
-static const uint16_t LCDC_WND_ENABLE_MASK = 0x20;
-static const uint16_t LCDC_WND_TILE_MAP_AREA_MASK = 0x40;
+static const uint16_t LCDC_BG_AND_WIN_TILE_DATA_AREA_MASK = 0x10;
+static const uint16_t LCDC_WIN_ENABLE_MASK = 0x20;
+static const uint16_t LCDC_WIN_TILE_MAP_AREA_MASK = 0x40;
 static const uint16_t LCDC_PPU_ENABLE_MASK = 0x80;
 
 // PPU Pallete Colors
