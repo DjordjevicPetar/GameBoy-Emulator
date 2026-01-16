@@ -1,10 +1,11 @@
 #include "../inc/ppu.hpp"
 
-PPU::PPU() :
+PPU::PPU(InterruptController* interrupt_controller) :
     framebuffer(LCD_HEIGHT, std::vector<uint32_t>(LCD_WIDTH, 0)),
     vram(VRAM_SIZE),
     oam(OAM_SIZE),
-    palette(PALETTE_SIZE)
+    palette(PALETTE_SIZE),
+    interrupt_controller(interrupt_controller)
 {
     mode = OAM;
     ly = 0;
@@ -132,6 +133,7 @@ void PPU::step(uint8_t cycles) {
     else if (mode == DRAW) {
         if (cycle_counter >= PPU_OAM_CYCLES + PPU_DRAW_CYCLES) {
             mode = HBlank;
+            if (stat & STAT_HBLANK_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
             render_scanline();
         }
     }
@@ -142,9 +144,12 @@ void PPU::step(uint8_t cycles) {
 
             if (ly == PPU_VBLANK_FIRST_LINE) {
                 mode = VBlank;
+                interrupt_controller->request_interrupt(INTERRUPT_VBLANK_BIT);
+                if (stat & STAT_VBLANK_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
             }
             else {
                 mode = OAM;
+                if (stat & STAT_OAM_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
             }
         }
     }
@@ -155,12 +160,20 @@ void PPU::step(uint8_t cycles) {
             if (ly > PPU_VBLANK_LAST_LINE) {
                 ly = 0;
                 mode = OAM;
+                if (stat & STAT_OAM_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
             }
         }
     }
 
     // stat bits update
+    uint8_t old_stat_lyc = stat & STAT_LY_COMPARE_TRUE;
+
     stat = (stat & STAT_READ_WRITE_MASK) | (lyc == ly ? STAT_LY_COMPARE_TRUE : STAT_LY_COMPARE_FALSE) | (mode & STAT_MODE_MASK);
+    
+    uint8_t new_stat_lyc = stat & STAT_LY_COMPARE_TRUE;
+    if (old_stat_lyc != new_stat_lyc) {
+        if (lyc == ly && (stat & STAT_LYC_INTERRUPT_ENABLE_MASK)) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT); 
+    }
 }
 
 void PPU::render_scanline() {
@@ -259,5 +272,86 @@ void PPU::render_window() {
 }
 
 void PPU::render_sprites() {
-    // TODO
+    if (!(lcdc & LCDC_OBJ_ENABLE_MASK)) return;
+
+    bool sprite_size = lcdc & LCDC_OBJ_SIZE_MASK;
+
+    struct Sprite {
+        uint8_t y, x;
+        uint8_t tile;
+        uint8_t flags;
+    };
+
+    Sprite sprites[10];
+    int count = 0;
+
+    for (int i = 0; i < 40; i++) {
+        uint8_t y = oam[i * 4 + 0];
+        uint8_t x = oam[i * 4 + 1];
+        uint8_t tile = oam[i * 4 + 2];
+        uint8_t flags = oam[i * 4 + 3];
+
+        int sprite_y = y - 16;
+        int sprite_x = x - 8;
+
+        if (ly < sprite_y || ly >= sprite_y + (sprite_size ? 16 : 8)) continue;
+
+        if (count < 10) {
+            sprites[count++] = {y, x, tile, flags};
+        }
+    }
+
+    if (count == 0) return;
+
+    for (int i = 0; i < count; i++) {
+        uint8_t y = sprites[i].y;
+        uint8_t x = sprites[i].x;
+        uint8_t tile = sprites[i].tile;
+        uint8_t flags = sprites[i].flags;
+
+        int sprite_y = y - 16;
+        int sprite_x = x - 8;
+
+        bool flip_x = flags & 0x20;
+        bool flip_y = flags & 0x40;
+        bool behind_bg = flags & 0x80;
+        uint8_t palette_id = flags & 0x10 ? obp1 : obp0;
+
+        int local_y = ly - sprite_y;
+        if (flip_y) {
+            local_y = (sprite_size ? 15 : 7) - local_y;
+        }
+
+        if (sprite_size) {
+            tile &= 0xFE; // bit0 not used
+        }
+
+        uint16_t tile_addr = 0x8000 + tile * 16;
+        tile_addr += local_y * 2;
+
+        uint8_t byte0 = vram[tile_addr - VRAM_START];
+        uint8_t byte1 = vram[tile_addr - VRAM_START + 1];
+
+        for (int px = 0; px < 8; px++) {
+            int screen_x = sprite_x + px;
+            if (screen_x < 0 || screen_x >= 160) continue;
+
+            int bit_select = flip_x ? px : (7 - px);
+
+            uint8_t bit0 = (byte0 >> bit_select) & 1;
+            uint8_t bit1 = (byte1 >> bit_select) & 1;
+            uint8_t color_id = (bit1 << 1) | bit0;
+
+            if (color_id == 0) continue;
+
+            if (behind_bg) {
+                uint32_t bg_col = line[screen_x];
+                if (bg_col != palette[0]) continue;
+            }
+
+            uint8_t shade = (palette_id >> (color_id * 2)) & 0x03;
+
+            line[screen_x] = palette[shade];
+        }
+    }
 }

@@ -122,6 +122,11 @@ static const uint16_t STAT_MODE_MASK = 0x03;
 static const uint16_t STAT_LY_COMPARE_TRUE = 0x04;
 static const uint16_t STAT_LY_COMPARE_FALSE = 0x00;
 
+static const uint8_t STAT_HBLANK_INTERRUPT_ENABLE_MASK = 0x08;
+static const uint8_t STAT_VBLANK_INTERRUPT_ENABLE_MASK = 0x10;
+static const uint8_t STAT_OAM_INTERRUPT_ENABLE_MASK = 0x20;
+static const uint8_t STAT_LYC_INTERRUPT_ENABLE_MASK = 0x40;
+
 // PPU LCDC Masks
 static const uint16_t LCDC_BG_AND_WIN_ENABLE_MASK = 0x01;
 static const uint16_t LCDC_OBJ_ENABLE_MASK = 0x02;
