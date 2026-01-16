@@ -8,9 +8,11 @@ std::string GameBoyEmulator::filepath_ = "";
 
 GameBoyEmulator::GameBoyEmulator() 
     : interrupt_controller_()
-    , mmu_(filepath_)
+    , ppu_(&interrupt_controller_)
+    , timer_(&interrupt_controller_)
+    , mmu_(filepath_, &ppu_, &timer_)
     , cpu_(&mmu_, &interrupt_controller_)
-    , timer_(&interrupt_controller_) {}
+     {}
 
 GameBoyEmulator* GameBoyEmulator::getInstance() {
     if (instance_ == nullptr) {
