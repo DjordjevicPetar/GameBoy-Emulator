@@ -1,8 +1,9 @@
 #include "../inc/mmu.hpp"
 
-MMU::MMU(std::string file_path)
-    : cartridge(file_path),
-      ppu(),
+MMU::MMU(std::string file_path, PPU* ppu, Timer* timer)
+    : cartridge(file_path), // Interrupt Controller will probably be needed as well
+      ppu(ppu),
+      timer(timer),
       wram(INTERNAL_RAM_SIZE, 0),
       hram(HIGH_RAM_SIZE, 0)
     {}
@@ -13,7 +14,7 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
         return cartridge.read8(addr);
     }
     else if (addr <= VRAM_END) {
-        return ppu.read(addr);
+        return ppu->read(addr);
     }
     else if (addr <= SWITCHABLE_RAM_END) {
         return cartridge.read8(addr);
@@ -23,16 +24,16 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
     }
     else if (addr <= OAM_END) {
         if (addr >= OAM_START) {
-            return ppu.read(addr);
+            return ppu->read(addr);
         }
     }
     else if (addr <= IO_END) {
         if (addr >= IO_START) {
             if (addr >= TIMER_REGS_START && addr <= TIMER_REGS_END) {
-                // Call timer.read
+                timer->read_timer(addr);
             }
             else if (addr >= PPU_REGS_START && addr <= PPU_REGS_END) {
-                return ppu.read(addr);
+                return ppu->read(addr);
             }
             // TODO Other scopes (Interrupt Controller, etc)
         }
@@ -53,7 +54,7 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
         cartridge.write8(addr, val);
     }
     else if (addr <= VRAM_END) {
-        ppu.write(addr, val);
+        ppu->write(addr, val);
     }
     else if (addr <= SWITCHABLE_RAM_END) {
         cartridge.write8(addr, val);
@@ -63,16 +64,16 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
     }
     else if (addr <= OAM_END) {
         if (addr >= OAM_START) {
-            ppu.write(addr, val);
+            ppu->write(addr, val);
         }
     }
     else if (addr <= IO_END) {
         if (addr >= IO_START) {
             if (addr >= TIMER_REGS_START && addr <= TIMER_REGS_END) {
-                // Call timer.write
+                timer->write_timer(addr, val);
             }
             else if (addr >= PPU_REGS_START && addr <= PPU_REGS_END) {
-                return ppu.write(addr, val);
+                return ppu->write(addr, val);
             }
             // TODO Other scopes (Interrupt Controller, etc)
         }

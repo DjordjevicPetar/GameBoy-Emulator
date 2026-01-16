@@ -26,9 +26,11 @@ public:
 private:
     // Components (order matters for initialization!)
     InterruptController interrupt_controller_;
+    PPU ppu_;
+    Timer timer_;
     MMU mmu_;
     CPU cpu_;
-    Timer timer_;
+    
     
     // State
     bool stop_cpu_ = false;
