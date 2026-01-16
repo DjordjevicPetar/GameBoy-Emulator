@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 #include "constants_mmu.hpp"
+#include "interrupt_controller.hpp"
 
 enum PPUMode {
     HBlank, VBlank, OAM, DRAW
@@ -11,7 +12,7 @@ enum PPUMode {
 
 class PPU {
 public:
-    PPU();
+    PPU(InterruptController* interrupt_controller);
     void reset();
     void step(uint8_t cycles);
 
@@ -21,6 +22,8 @@ public:
     const std::vector<std::vector<uint32_t>>& get_framebuffer() const;
 
 private:
+    InterruptController* interrupt_controller;
+
     uint8_t mode;
     uint8_t ly;
     int cycle_counter;
