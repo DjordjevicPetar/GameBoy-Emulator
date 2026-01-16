@@ -17,7 +17,7 @@ public:
     bool load_rom(std::string path);
     void print_rom();
 
-    void parse_header(); // TODO
+    void parse_header();
 
     uint8_t read8(uint16_t addr) const;
     void write8(uint16_t addr, uint8_t val);
