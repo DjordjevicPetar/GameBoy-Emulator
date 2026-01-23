@@ -1,11 +1,11 @@
 #include "../inc/ppu.hpp"
 
 PPU::PPU(InterruptController* interrupt_controller) :
+    interrupt_controller(interrupt_controller),
     framebuffer(LCD_HEIGHT, std::vector<uint32_t>(LCD_WIDTH, 0)),
     vram(VRAM_SIZE),
     oam(OAM_SIZE),
-    palette(PALETTE_SIZE),
-    interrupt_controller(interrupt_controller)
+    palette(PALETTE_SIZE)
 {
     mode = OAM;
     ly = 0;
@@ -70,7 +70,7 @@ void PPU::write(uint16_t addr, uint8_t val) {
         return;
     }
     switch (addr) {
-        case LCDC_ADDR:
+        case LCDC_ADDR: {
             bool lcd_enable_prev = lcdc & LCDC_PPU_ENABLE_MASK;
             bool lcd_enable_new = val & LCDC_PPU_ENABLE_MASK;
 
@@ -87,38 +87,50 @@ void PPU::write(uint16_t addr, uint8_t val) {
                 cycle_counter = 0;
             }
             return;
-        case STAT_ADDR:
+        }
+        case STAT_ADDR: {
             stat = (stat & STAT_READ_ONLY_MASK) | (val & STAT_READ_WRITE_MASK);
             return;
-        case SCY_ADDR:
+        }
+        case SCY_ADDR: {
             scy = val;
             return;
-        case SCX_ADDR:
+        }
+        case SCX_ADDR: {
             scx = val;
             return;
-        case LY_ADDR:
+        }
+        case LY_ADDR: {
             // 'ly' is read only (it automatically updates in step())
             return;
-        case LYC_ADDR:
+        }
+        case LYC_ADDR: {
             lyc = val;
             return;
-        case BGP_ADDR:
+        }
+        case BGP_ADDR: {
             bgp = val;
             return;
-        case OBP0_ADDR:
+        }
+        case OBP0_ADDR: {
             obp0 = val;
             return;
-        case OBP1_ADDR:
+        }
+        case OBP1_ADDR: {
             obp1 = val;
             return;
-        case WY_ADDR:
+        }
+        case WY_ADDR: {
             wy = val;
             return;
-        case WX_ADDR:
+        }
+        case WX_ADDR: {
             wx = val;
             return;
-        default:
+        }
+        default: {
             return;
+        }
     }
 }
 
@@ -234,8 +246,6 @@ void PPU::render_window() {
     uint8_t tile_row = win_y / 8;
     uint8_t tile_row_pixel = win_y % 8;
 
-    int x_coord_start = wx - 7;
-
     uint16_t tile_addr;
 
     for (int x = 0; x < LCD_WIDTH; x++) {
@@ -292,7 +302,6 @@ void PPU::render_sprites() {
         uint8_t flags = oam[i * 4 + 3];
 
         int sprite_y = y - 16;
-        int sprite_x = x - 8;
 
         if (ly < sprite_y || ly >= sprite_y + (sprite_size ? 16 : 8)) continue;
 
@@ -354,4 +363,12 @@ void PPU::render_sprites() {
             line[screen_x] = palette[shade];
         }
     }
+}
+
+PPUMode PPU::get_mode() {
+    return mode;
+}
+
+uint8_t PPU::get_ly() {
+    return ly;
 }

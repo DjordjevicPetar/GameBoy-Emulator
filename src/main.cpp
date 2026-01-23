@@ -20,6 +20,9 @@ int main(int argc, char* argv[]){
         }
     }
 
+    // temporary
+    rom_path = "cpu_instrs.gb";
+
     if (rom_path == nullptr) {
         std::cout << "ERROR: Program to execute not given" << std::endl;
         std::cout << "Usage: gameboy [-l] <rom_file>" << std::endl;

@@ -7,6 +7,7 @@
 #include "interrupt_controller.hpp"
 #include <cstdint>
 #include <string>
+#include <SDL3/SDL.h>
 
 class GameBoyEmulator {
 public:
@@ -19,6 +20,8 @@ public:
     GameBoyEmulator& operator=(GameBoyEmulator&&) = delete;
     
     void emulate();
+    bool run_until_next_frame();
+
     static void setFilepath(const std::string& filepath);
     
     static GameBoyEmulator* getInstance();

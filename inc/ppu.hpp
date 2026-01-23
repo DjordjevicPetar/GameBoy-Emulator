@@ -21,18 +21,19 @@ public:
 
     const std::vector<std::vector<uint32_t>>& get_framebuffer() const;
 
+    PPUMode get_mode();
+    uint8_t get_ly();
+
 private:
     InterruptController* interrupt_controller;
 
-    uint8_t mode;
-    uint8_t ly;
-    int cycle_counter;
-
     std::vector<std::vector<uint32_t>> framebuffer;
-    std::vector<uint32_t> palette;
-
     std::vector<uint8_t> vram;
     std::vector<uint8_t> oam;
+    std::vector<uint32_t> palette;
+
+    PPUMode mode;
+    int cycle_counter;
 
     void render_scanline();
 
