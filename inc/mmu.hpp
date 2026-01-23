@@ -5,7 +5,6 @@
 #include "cartridge.hpp"
 #include "ppu.hpp"
 #include "timer.hpp"
-#include <cstdint>
 
 class MMU {
 public:

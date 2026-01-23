@@ -1,6 +1,8 @@
 #ifndef _CONSTANTS_MMU_HPP_
 #define _CONSTANTS_MMU_HPP_
 
+#include <cstdint>
+
 // ROM Regions
 static const uint16_t STATIC_ROM_START = 0x0000;
 static const uint16_t STATIC_ROM_END = 0x3FFF;
