@@ -34,6 +34,27 @@ const std::vector<std::vector<uint32_t>>& PPU::get_framebuffer() const {
     return framebuffer;
 }
 
+void PPU::update_stat_register() {
+    stat = (stat & STAT_READ_WRITE_MASK) | (lyc == ly ? STAT_LY_COMPARE_TRUE : STAT_LY_COMPARE_FALSE) | (mode & STAT_MODE_MASK);
+}
+
+void PPU::check_lyc_interrupt() {
+    update_stat_register();
+    if (lyc == ly && (stat & STAT_LYC_INTERRUPT_ENABLE_MASK)) {
+        interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+    }
+}
+
+void PPU::clear_framebuffer() {
+    uint32_t white = 0xFFFFFFFF;
+
+    for (int y = 0; y < LCD_HEIGHT; y++) {
+        for (int x = 0; x < LCD_WIDTH; x++) {
+            framebuffer[y][x] = white;
+        }
+    }
+}
+
 uint8_t PPU::read(uint16_t addr) const {
     if (addr >= VRAM_START && addr <= VRAM_END) {
         return vram[addr - VRAM_START];
@@ -79,10 +100,11 @@ void PPU::write(uint16_t addr, uint8_t val) {
                 mode = HBlank;
                 ly = 0;
                 cycle_counter = 0;
+                clear_framebuffer();
             }
 
             else if (!lcd_enable_prev && lcd_enable_new) {
-                mode = HBlank;
+                mode = OAM;
                 ly = 0;
                 cycle_counter = 0;
             }
@@ -106,6 +128,10 @@ void PPU::write(uint16_t addr, uint8_t val) {
         }
         case LYC_ADDR: {
             lyc = val;
+            if (lyc == ly && (stat & STAT_LYC_INTERRUPT_ENABLE_MASK)) {
+                interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+            }
+            update_stat_register();
             return;
         }
         case BGP_ADDR: {
@@ -135,16 +161,20 @@ void PPU::write(uint16_t addr, uint8_t val) {
 }
 
 void PPU::step(uint8_t cycles) {
+    if (!(lcdc & LCDC_PPU_ENABLE_MASK)) return;
+
     cycle_counter += cycles;
 
     if (mode == OAM) {
         if (cycle_counter >= PPU_OAM_CYCLES) {
             mode = DRAW;
+            update_stat_register();
         }
     }
     else if (mode == DRAW) {
         if (cycle_counter >= PPU_OAM_CYCLES + PPU_DRAW_CYCLES) {
             mode = HBlank;
+            update_stat_register();
             if (stat & STAT_HBLANK_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
             render_scanline();
         }
@@ -153,14 +183,17 @@ void PPU::step(uint8_t cycles) {
         if (cycle_counter >= PPU_FULL_LINE_CYCLES) {
             cycle_counter -= PPU_FULL_LINE_CYCLES;
             ly++;
+            check_lyc_interrupt();
 
             if (ly == PPU_VBLANK_FIRST_LINE) {
                 mode = VBlank;
+                update_stat_register();
                 interrupt_controller->request_interrupt(INTERRUPT_VBLANK_BIT);
                 if (stat & STAT_VBLANK_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
             }
             else {
                 mode = OAM;
+                update_stat_register();
                 if (stat & STAT_OAM_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
             }
         }
@@ -169,26 +202,22 @@ void PPU::step(uint8_t cycles) {
         if (cycle_counter >= PPU_FULL_LINE_CYCLES) {
             cycle_counter -= PPU_FULL_LINE_CYCLES;
             ly++;
+            check_lyc_interrupt();
+
             if (ly > PPU_VBLANK_LAST_LINE) {
                 ly = 0;
+                check_lyc_interrupt();
                 mode = OAM;
+                update_stat_register();
                 if (stat & STAT_OAM_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
             }
         }
     }
-
-    // stat bits update
-    uint8_t old_stat_lyc = stat & STAT_LY_COMPARE_TRUE;
-
-    stat = (stat & STAT_READ_WRITE_MASK) | (lyc == ly ? STAT_LY_COMPARE_TRUE : STAT_LY_COMPARE_FALSE) | (mode & STAT_MODE_MASK);
-    
-    uint8_t new_stat_lyc = stat & STAT_LY_COMPARE_TRUE;
-    if (old_stat_lyc != new_stat_lyc) {
-        if (lyc == ly && (stat & STAT_LYC_INTERRUPT_ENABLE_MASK)) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT); 
-    }
 }
 
 void PPU::render_scanline() {
+    std::cout << "Render Scanline called.\n";
+
     render_background();
     render_window();
     render_sprites();
@@ -249,7 +278,7 @@ void PPU::render_window() {
     uint16_t tile_addr;
 
     for (int x = 0; x < LCD_WIDTH; x++) {
-        uint8_t win_x = x - (wx - 7);
+        int16_t win_x = x - (wx - 7);
 
         if (win_x < 0) continue;
         if (win_x >= 160) break;

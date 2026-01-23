@@ -5,6 +5,7 @@
 #include <vector>
 #include "constants_mmu.hpp"
 #include "interrupt_controller.hpp"
+#include <iostream>
 
 enum PPUMode {
     HBlank, VBlank, OAM, DRAW
@@ -40,6 +41,11 @@ private:
     void render_background();
     void render_window();
     void render_sprites();
+
+    void update_stat_register();
+    void check_lyc_interrupt();
+
+    void clear_framebuffer();
 
     uint8_t lcdc;
     uint8_t stat;

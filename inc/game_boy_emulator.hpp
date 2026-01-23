@@ -20,7 +20,7 @@ public:
     GameBoyEmulator& operator=(GameBoyEmulator&&) = delete;
     
     void emulate();
-    bool run_until_next_frame();
+    
 
     static void setFilepath(const std::string& filepath);
     
@@ -34,7 +34,9 @@ private:
     MMU mmu_;
     CPU cpu_;
     
-    
+    bool run_until_next_frame();
+    bool check_quit_request();
+
     // State
     bool stop_cpu_ = false;
     bool stop_gpu_ = false;

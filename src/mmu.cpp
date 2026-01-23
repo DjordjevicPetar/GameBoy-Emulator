@@ -1,11 +1,12 @@
 #include "../inc/mmu.hpp"
 
-MMU::MMU(std::string file_path, PPU* ppu, Timer* timer)
-    : cartridge(file_path), // Interrupt Controller will probably be needed as well
-      ppu(ppu),
-      timer(timer),
-      wram(INTERNAL_RAM_SIZE, 0),
-      hram(HIGH_RAM_SIZE, 0)
+MMU::MMU(std::string file_path, PPU* ppu, Timer* timer, InterruptController* interrupt_controller) :
+    cartridge(file_path),
+    interrupt_controller(interrupt_controller),
+    ppu(ppu),
+    timer(timer),
+    wram(INTERNAL_RAM_SIZE, 0),
+    hram(HIGH_RAM_SIZE, 0)
     {}
 
 uint8_t MMU::read_memory_8(uint16_t addr) const {
@@ -22,10 +23,11 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
     else if (addr <= INTERNAL_RAM_END) {
         return wram[addr - INTERNAL_RAM_START];
     }
+    else if (addr <= ECHO_RAM_END) {
+        return wram[addr - INTERNAL_RAM_SIZE - INTERNAL_RAM_START];
+    }
     else if (addr <= OAM_END) {
-        if (addr >= OAM_START) {
-            return ppu->read(addr);
-        }
+        return ppu->read(addr);
     }
     else if (addr <= IO_END) {
         if (addr >= IO_START) {
@@ -44,7 +46,7 @@ uint8_t MMU::read_memory_8(uint16_t addr) const {
         }
     }
     else if (addr == INTERRUPT_REGISTER_ADDR) {
-        // TODO
+        interrupt_controller->read_interrupt(addr);
     }
     return DEFAULT_READ_RETURN;
 }
@@ -62,10 +64,11 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
     else if (addr <= INTERNAL_RAM_END) {
         wram[addr - INTERNAL_RAM_START] = val;
     }
+    else if (addr <= ECHO_RAM_END) {
+        wram[addr - INTERNAL_RAM_SIZE - INTERNAL_RAM_START] = val;
+    }
     else if (addr <= OAM_END) {
-        if (addr >= OAM_START) {
-            ppu->write(addr, val);
-        }
+        ppu->write(addr, val);
     }
     else if (addr <= IO_END) {
         if (addr >= IO_START) {
@@ -84,6 +87,6 @@ void MMU::write_memory_8(uint16_t addr, uint8_t val) {
         }
     }
     else if (addr == INTERRUPT_REGISTER_ADDR) {
-        // TODO
+        interrupt_controller->write_interrupt(addr, val);
     }
 }
