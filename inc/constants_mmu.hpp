@@ -27,6 +27,11 @@ static const uint16_t INTERNAL_RAM_START = 0xC000;
 static const uint16_t INTERNAL_RAM_END = 0xDFFF;
 static const uint16_t INTERNAL_RAM_SIZE = 0x2000;
 
+// Echo RAM
+static const uint16_t ECHO_RAM_START = 0xE000;
+static const uint16_t ECHO_RAM_END = 0xFDFF;
+static const uint16_t ECHO_RAM_SIZE = 0x1DFF;
+
 // Sprite Attribute Table (OAM)
 static const uint16_t OAM_START = 0xFE00;
 static const uint16_t OAM_END = 0xFE9F;

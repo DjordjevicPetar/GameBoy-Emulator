@@ -8,12 +8,13 @@
 
 class MMU {
 public:
-    MMU(std::string file_path, PPU* ppu, Timer* timer);
+    MMU(std::string file_path, PPU* ppu, Timer* timer, InterruptController* interrupt_controller);
 
     uint8_t read_memory_8(uint16_t addr) const;
     void write_memory_8(uint16_t addr, uint8_t val);
 private:
     Cartridge cartridge;
+    InterruptController* interrupt_controller;
     PPU* ppu;
     Timer* timer;
 

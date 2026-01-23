@@ -38,6 +38,8 @@ void CPU::log(const std::string& func_name, const std::string& details) {
 }
 
 uint8_t CPU::execute_next_instruction() {
+    std::cout << "Executing instruction " << std::hex << pc_ << std::dec << '\n';
+
     current_opcode_ = fetchOpcode();
     
     for (auto& [op, handler] : op_handlers_) {
