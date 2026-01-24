@@ -1,0 +1,416 @@
+#include "ppu.hpp"
+
+PPU::PPU(InterruptController* interrupt_controller) :
+    interrupt_controller(interrupt_controller),
+    framebuffer(LCD_HEIGHT, std::vector<u32>(LCD_WIDTH, 0)),
+    vram(VRAM_SIZE),
+    oam(OAM_SIZE),
+    palette(PALETTE_SIZE),
+    line(LCD_WIDTH, 0)  // Initialize line buffer for scanline rendering
+{
+
+    lcdc = 0x91;
+    stat = 0x85;
+    scy = 0x00;
+    scx = 0x00;
+    ly = 0x00;
+    lyc = 0x00;
+    bgp = 0xFC;
+    obp0 = 0xFF;
+    obp1 = 0xFF;
+    wy = 0x00;
+    wx = 0x00;
+
+    mode = OAM;
+    cycle_counter = 0;
+
+    palette[0] = PPU_WHITE;
+    palette[1] = PPU_LIGHT_GRAY;
+    palette[2] = PPU_DARK_GRAY;
+    palette[3] = PPU_BLACK;
+}
+
+void PPU::reset() {
+    mode = OAM;
+    ly = 0;
+    cycle_counter = 0;
+
+    for (auto& row: framebuffer) {
+        row.assign(LCD_WIDTH, 0);
+    }
+
+    vram.assign(VRAM_SIZE, 0);
+    oam.assign(OAM_SIZE, 0);
+}
+
+const std::vector<std::vector<u32>>& PPU::get_framebuffer() const {
+    return framebuffer;
+}
+
+void PPU::update_stat_register() {
+    stat = (stat & STAT_READ_WRITE_MASK) | (lyc == ly ? STAT_LY_COMPARE_TRUE : STAT_LY_COMPARE_FALSE) | (mode & STAT_MODE_MASK);
+}
+
+void PPU::check_lyc_interrupt() {
+    update_stat_register();
+    if (lyc == ly && (stat & STAT_LYC_INTERRUPT_ENABLE_MASK)) {
+        interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+    }
+}
+
+void PPU::clear_framebuffer() {
+    u32 white = 0xFFFFFFFF;
+
+    for (int y = 0; y < LCD_HEIGHT; y++) {
+        for (int x = 0; x < LCD_WIDTH; x++) {
+            framebuffer[y][x] = white;
+        }
+    }
+}
+
+u8 PPU::read(u16 addr) const {
+    if (addr >= VRAM_START && addr <= VRAM_END) {
+        if (mode == DRAW) return DEFAULT_READ_RETURN;
+        return vram[addr - VRAM_START];
+    }
+    else if (addr >= OAM_START && addr <= OAM_END) {
+        if (mode == OAM || mode == DRAW) return DEFAULT_READ_RETURN;
+        return oam[addr - OAM_START];
+    }
+    switch (addr) {
+        case PPU_REGISTER_LCDC: return lcdc;
+        case PPU_REGISTER_STAT: return (stat & STAT_READ_WRITE_MASK) | (lyc == ly ? STAT_LY_COMPARE_TRUE : STAT_LY_COMPARE_FALSE) | (mode & STAT_MODE_MASK);
+        case PPU_REGISTER_SCY: return scy;
+        case PPU_REGISTER_SCX: return scx;
+        case PPU_REGISTER_LY: return ly;
+        case PPU_REGISTER_LYC: return lyc;
+        case PPU_REGISTER_BGP: return bgp;
+        case PPU_REGISTER_OBP0: return obp0;
+        case PPU_REGISTER_OBP1: return obp1;
+        case PPU_REGISTER_WY: return wy;
+        case PPU_REGISTER_WX: return wx;
+
+        default: return DEFAULT_READ_RETURN;
+    }
+}
+
+void PPU::write(u16 addr, u8 val) {
+    if (addr >= VRAM_START && addr <= VRAM_END) {
+        if (mode == DRAW) return;
+        vram[addr - VRAM_START] = val;
+        return;
+    }
+    else if (addr >= OAM_START && addr <= OAM_END) {
+        if (mode == OAM || mode == DRAW) return;
+        oam[addr - OAM_START] = val;
+        return;
+    }
+    switch (addr) {
+        case PPU_REGISTER_LCDC: {
+            bool lcd_enable_prev = lcdc & LCDC_PPU_ENABLE_MASK;
+            bool lcd_enable_new = val & LCDC_PPU_ENABLE_MASK;
+
+            lcdc = val;
+            if (lcd_enable_prev && !lcd_enable_new) {
+                mode = HBlank;
+                ly = 0;
+                cycle_counter = 0;
+                clear_framebuffer();
+            }
+
+            else if (!lcd_enable_prev && lcd_enable_new) {
+                mode = OAM;
+                ly = 0;
+                cycle_counter = 0;
+            }
+            return;
+        }
+        case PPU_REGISTER_STAT: {
+            stat = (stat & STAT_READ_ONLY_MASK) | (val & STAT_READ_WRITE_MASK);
+            return;
+        }
+        case PPU_REGISTER_SCY: {
+            scy = val;
+            return;
+        }
+        case PPU_REGISTER_SCX: {
+            scx = val;
+            return;
+        }
+        case PPU_REGISTER_LY: {
+            // 'ly' is read only (it automatically updates in step())
+            return;
+        }
+        case PPU_REGISTER_LYC: {
+            lyc = val;
+            if (lyc == ly && (stat & STAT_LYC_INTERRUPT_ENABLE_MASK)) {
+                interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+            }
+            update_stat_register();
+            return;
+        }
+        case PPU_REGISTER_BGP: {
+            bgp = val;
+            return;
+        }
+        case PPU_REGISTER_OBP0: {
+            obp0 = val;
+            return;
+        }
+        case PPU_REGISTER_OBP1: {
+            obp1 = val;
+            return;
+        }
+        case PPU_REGISTER_WY: {
+            wy = val;
+            return;
+        }
+        case PPU_REGISTER_WX: {
+            wx = val;
+            return;
+        }
+        default: {
+            return;
+        }
+    }
+}
+
+void PPU::step(u8 cycles) {
+    if (!(lcdc & LCDC_PPU_ENABLE_MASK)) return;
+
+    cycle_counter += cycles;
+
+    if (mode == OAM) {
+        if (cycle_counter >= PPU_OAM_CYCLES) {
+            mode = DRAW;
+            update_stat_register();
+        }
+    }
+    else if (mode == DRAW) {
+        if (cycle_counter >= PPU_OAM_CYCLES + PPU_DRAW_CYCLES) {
+            mode = HBlank;
+            update_stat_register();
+            if (stat & STAT_HBLANK_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+            render_scanline();
+        }
+    }
+    else if (mode == HBlank) {
+        if (cycle_counter >= PPU_FULL_LINE_CYCLES) {
+            cycle_counter -= PPU_FULL_LINE_CYCLES;
+            ly++;
+            check_lyc_interrupt();
+
+            if (ly == PPU_VBLANK_FIRST_LINE) {
+                mode = VBlank;
+                update_stat_register();
+                interrupt_controller->request_interrupt(INTERRUPT_VBLANK_BIT);
+                if (stat & STAT_VBLANK_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+            }
+            else {
+                mode = OAM;
+                update_stat_register();
+                if (stat & STAT_OAM_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+            }
+        }
+    }
+    else if (mode == VBlank) {
+        if (cycle_counter >= PPU_FULL_LINE_CYCLES) {
+            cycle_counter -= PPU_FULL_LINE_CYCLES;
+            ly++;
+            check_lyc_interrupt();
+
+            if (ly > PPU_VBLANK_LAST_LINE) {
+                ly = 0;
+                check_lyc_interrupt();
+                mode = OAM;
+                update_stat_register();
+                if (stat & STAT_OAM_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+            }
+        }
+    }
+}
+
+void PPU::render_scanline() {
+    render_background();
+    render_window();
+    render_sprites();
+
+    framebuffer[ly] = line;
+}
+
+void PPU::render_background() {
+    if (!(lcdc & LCDC_BG_AND_WIN_ENABLE_MASK)) return; // Background disabled
+    u16 tile_map_base = (lcdc & LCDC_BG_TILE_MAP_AREA_MASK) ? BACKGROUND_TILE_MAP1_START : BACKGROUND_TILE_MAP0_START;
+
+    u8 bg_y = (scy + ly) % 256;
+    u8 tile_row = bg_y / 8;
+    u8 tile_row_pixel = bg_y % 8;
+
+    u16 tile_addr;
+
+    for (u8 x = 0; x < LCD_WIDTH; x++) {
+        u8 bg_x = (scx + x) % 256;
+        u8 tile_col = bg_x / 8;
+        u8 tile_col_pixel = bg_x % 8;
+
+        u8 tile_id = vram[tile_map_base - VRAM_START + tile_row * 32 + tile_col];
+
+        if (lcdc & LCDC_BG_AND_WIN_TILE_DATA_AREA_MASK) {
+            u16 tile_data_base = 0x8000;
+            tile_addr = tile_data_base + tile_id * 16;
+        }
+        else {
+            u16 tile_data_base = 0x9000;
+            tile_addr = tile_data_base + (s8)tile_id * 16;
+        }
+
+        u8 byte0 = vram[tile_addr - VRAM_START + tile_row_pixel * 2];
+        u8 byte1 = vram[tile_addr - VRAM_START + tile_row_pixel * 2 + 1];
+
+        u8 bit_index = 7 - tile_col_pixel;
+        u8 bit0 = (byte0 >> bit_index) & 1;
+        u8 bit1 = (byte1 >> bit_index) & 1;
+
+        u8 color_id = (bit1 & 1) << 1 | (bit0 & 1);
+
+        line[x] = palette[color_id];
+    }
+}
+
+void PPU::render_window() {
+    if (!(lcdc & LCDC_BG_AND_WIN_ENABLE_MASK)) return; // Background and Window disabled
+    if (!(lcdc & LCDC_WIN_ENABLE_MASK)) return; // Window disabled
+    if (ly < wy) return; // Didn't get to the starting point yet
+
+    u16 tile_map_base = (lcdc & LCDC_WIN_TILE_MAP_AREA_MASK) ? BACKGROUND_TILE_MAP1_START : BACKGROUND_TILE_MAP0_START;
+    
+    u8 win_y = ly - wy;
+    u8 tile_row = win_y / 8;
+    u8 tile_row_pixel = win_y % 8;
+
+    u16 tile_addr;
+
+    for (int x = 0; x < LCD_WIDTH; x++) {
+        s16 win_x = x - (wx - 7);
+
+        if (win_x < 0) continue;
+        if (win_x >= 160) break;
+
+        u8 tile_col = win_x / 8;
+        u8 tile_col_pixel = win_x % 8;
+
+        u8 tile_id = vram[tile_map_base - VRAM_START + tile_row * 32 + tile_col];
+
+        if (lcdc & LCDC_BG_AND_WIN_TILE_DATA_AREA_MASK) {
+            u16 tile_data_base = 0x8000;
+            tile_addr = tile_data_base + tile_id * 16;
+        }
+        else {
+            u16 tile_data_base = 0x9000;
+            tile_addr = tile_data_base + (s8)tile_id * 16;
+        }
+
+        u8 byte0 = vram[tile_addr - VRAM_START + tile_row_pixel * 2];
+        u8 byte1 = vram[tile_addr - VRAM_START + tile_row_pixel * 2 + 1];
+
+        u8 bit_index = 7 - tile_col_pixel;
+        u8 bit0 = (byte0 >> bit_index) & 1;
+        u8 bit1 = (byte1 >> bit_index) & 1;
+
+        u8 color_id = (bit1 & 1) << 1 | (bit0 & 1);
+
+        line[x] = palette[color_id];
+    }
+}
+
+void PPU::render_sprites() {
+    if (!(lcdc & LCDC_OBJ_ENABLE_MASK)) return;
+
+    bool sprite_size = lcdc & LCDC_OBJ_SIZE_MASK;
+
+    struct Sprite {
+        u8 y, x;
+        u8 tile;
+        u8 flags;
+    };
+
+    Sprite sprites[10];
+    int count = 0;
+
+    for (int i = 0; i < 40; i++) {
+        u8 y = oam[i * 4 + 0];
+        u8 x = oam[i * 4 + 1];
+        u8 tile = oam[i * 4 + 2];
+        u8 flags = oam[i * 4 + 3];
+
+        int sprite_y = y - 16;
+
+        if (ly < sprite_y || ly >= sprite_y + (sprite_size ? 16 : 8)) continue;
+
+        if (count < 10) {
+            sprites[count++] = {y, x, tile, flags};
+        }
+    }
+
+    if (count == 0) return;
+
+    for (int i = 0; i < count; i++) {
+        u8 y = sprites[i].y;
+        u8 x = sprites[i].x;
+        u8 tile = sprites[i].tile;
+        u8 flags = sprites[i].flags;
+
+        int sprite_y = y - 16;
+        int sprite_x = x - 8;
+
+        bool flip_x = flags & 0x20;
+        bool flip_y = flags & 0x40;
+        bool behind_bg = flags & 0x80;
+        u8 palette_id = flags & 0x10 ? obp1 : obp0;
+
+        int local_y = ly - sprite_y;
+        if (flip_y) {
+            local_y = (sprite_size ? 15 : 7) - local_y;
+        }
+
+        if (sprite_size) {
+            tile &= 0xFE; // bit0 not used
+        }
+
+        u16 tile_addr = 0x8000 + tile * 16;
+        tile_addr += local_y * 2;
+
+        u8 byte0 = vram[tile_addr - VRAM_START];
+        u8 byte1 = vram[tile_addr - VRAM_START + 1];
+
+        for (int px = 0; px < 8; px++) {
+            int screen_x = sprite_x + px;
+            if (screen_x < 0 || screen_x >= 160) continue;
+
+            int bit_select = flip_x ? px : (7 - px);
+
+            u8 bit0 = (byte0 >> bit_select) & 1;
+            u8 bit1 = (byte1 >> bit_select) & 1;
+            u8 color_id = (bit1 << 1) | bit0;
+
+            if (color_id == 0) continue;
+
+            if (behind_bg) {
+                u32 bg_col = line[screen_x];
+                if (bg_col != palette[0]) continue;
+            }
+
+            u8 shade = (palette_id >> (color_id * 2)) & 0x03;
+
+            line[screen_x] = palette[shade];
+        }
+    }
+}
+
+PPUMode PPU::get_mode() {
+    return mode;
+}
+
+u8 PPU::get_ly() {
+    return ly;
+}

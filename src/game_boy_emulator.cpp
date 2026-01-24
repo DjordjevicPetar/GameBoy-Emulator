@@ -1,5 +1,5 @@
-#include "../inc/game_boy_emulator.hpp"
-#include "../inc/cartridge.hpp"
+#include "game_boy_emulator.hpp"
+#include "memory/cartridge.hpp"
 #include <iostream>
 
 GameBoyEmulator* GameBoyEmulator::instance_ = nullptr;
@@ -42,7 +42,7 @@ bool GameBoyEmulator::run_until_next_frame() {
     int instruction_count = 0;
 
     while (!next_frame_detected && !stop_cpu_) {
-        uint8_t cycles = cpu_.execute_next_instruction();
+        u8 cycles = cpu_.execute_next_instruction();
         cycles += cpu_.handle_interrupts();
         cycles_executed_ += cycles;
         
@@ -50,19 +50,21 @@ bool GameBoyEmulator::run_until_next_frame() {
         timer_.update_timer(cycles);
 
         // Handle Graphics
+        PPUMode prev_mode = ppu_.get_mode();
+        u8 prev_ly = ppu_.get_ly();
+
         ppu_.step(cycles);
 
         if (ppu_.get_ly() == 0 && ppu_.get_mode() == PPUMode::OAM) {
-            std::cout << "Next frame detected!\n";
-            next_frame_detected = true;
+            if (prev_ly != 0 || prev_mode != PPUMode::OAM) {
+                next_frame_detected = true;
+            }
         }
 
         instruction_count++;
         if (instruction_count > 100) {
             if (check_quit_request()) return !stop_cpu_;
         }
-
-        std::cout << "Stop_cpu = " << stop_cpu_ << '\n';
         // TODO: Audio, etc.
     }
     return !stop_cpu_;
@@ -70,21 +72,42 @@ bool GameBoyEmulator::run_until_next_frame() {
 
 void GameBoyEmulator::emulate() {
     // Initialize SDL
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+        std::cerr << "SDL_Init failed: " << SDL_GetError() << std::endl;
+        return;
+    }
 
     SDL_Window* window = SDL_CreateWindow("Game Boy Emulator", LCD_WIDTH * 4, LCD_HEIGHT * 4, SDL_WINDOW_RESIZABLE);
+    if (!window) {
+        std::cerr << "SDL_CreateWindow failed: " << SDL_GetError() << std::endl;
+        SDL_Quit();
+        return;
+    }
 
     SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
+    if (!renderer) {
+        std::cerr << "SDL_CreateRenderer failed: " << SDL_GetError() << std::endl;
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return;
+    }
 
     SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 160, 144);
+    if (!texture) {
+        std::cerr << "SDL_CreateTexture failed: " << SDL_GetError() << std::endl;
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return;
+    }
 
     bool running = true;
     SDL_Event e;
 
-    const double target_fps = 30;
+    const double target_fps = 59.71;
     const double target_ms = 1000.0 / target_fps;
 
-    uint32_t last = SDL_GetTicks();
+    u32 last = SDL_GetTicks();
 
     while (running) {
         while (SDL_PollEvent(&e)) {
@@ -101,11 +124,11 @@ void GameBoyEmulator::emulate() {
         void* pixels;
         int pitch;
 
-        if (SDL_LockTexture(texture, NULL, &pixels, &pitch) == 0) {
-            const std::vector<std::vector<uint32_t>>& fb = ppu_.get_framebuffer();
+        if (SDL_LockTexture(texture, NULL, &pixels, &pitch)) {  // SDL3 returns true on success
+            const std::vector<std::vector<u32>>& fb = ppu_.get_framebuffer();
 
             for (int y = 0; y < LCD_HEIGHT; y++) {
-                uint32_t* dst = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(pixels) + y * pitch);
+                u32* dst = reinterpret_cast<u32*>(static_cast<u8*>(pixels) + y * pitch);
 
                 for (int x = 0; x < LCD_WIDTH; x++) {
                     dst[x] = fb[y][x];
@@ -114,16 +137,15 @@ void GameBoyEmulator::emulate() {
 
             SDL_UnlockTexture(texture);
         }
-        std::cout << "Rendering...\n";
         SDL_RenderClear(renderer);
         SDL_RenderTexture(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
 
-        uint64_t now = SDL_GetTicks();
+        u64 now = SDL_GetTicks();
         double elapsed = (double)(now - last);
 
         if (elapsed < target_ms) {
-            SDL_Delay((uint32_t)target_ms - elapsed);
+            SDL_Delay((u32)target_ms - elapsed);
         }
 
         last = SDL_GetTicks();
