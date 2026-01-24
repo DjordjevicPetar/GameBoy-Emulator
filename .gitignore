@@ -1,0 +1,26 @@
+# Build artifacts
+gameboy
+gameboy.exe
+gameboy_debug
+*.dSYM/
+
+# Log files
+cpu_log.txt
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Games (ROMs) - keep test ROMs only
+games/*.gb
+!games/dmg-acid2.gb
+
+# Dependencies (SDL is large, should be installed separately)
+# SDL3-3.2.26/
