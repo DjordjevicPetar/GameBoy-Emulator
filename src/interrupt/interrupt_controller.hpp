@@ -1,8 +1,8 @@
 #pragma once
 
-#include "utils/types.hpp"
+#include "../utils/types.hpp"
 
-#include "utils/constants.hpp"
+#include "../utils/constants.hpp"
 
 // Interrupt Handler Addresses (ISR vectors)
 enum INTERRUPT_HANDLER_ADDRESSES {

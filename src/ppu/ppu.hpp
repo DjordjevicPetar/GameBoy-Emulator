@@ -1,12 +1,13 @@
 #pragma once
 
-#include "utils/types.hpp"
+#include "../utils/types.hpp"
 
 
 #include <vector>
-#include "memory/memory_constants.hpp"
-#include "interrupt/interrupt_controller.hpp"
+#include "../memory/memory_constants.hpp"
+#include "../interrupt/interrupt_controller.hpp"
 #include <iostream>
+#include <algorithm>
 
 // PPU Register Addresses
 enum PPU_REGISTER_ADDRESSES {
@@ -99,6 +100,9 @@ public:
     u8 get_ly();
 
 private:
+    uint8_t window_line_counter;
+    bool window_was_rendered;
+
     InterruptController* interrupt_controller;
 
     std::vector<std::vector<u32>> framebuffer;

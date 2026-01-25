@@ -1,12 +1,12 @@
 #pragma once
 
-#include "utils/types.hpp"
+#include "../utils/types.hpp"
 
 
-#include "memory/memory_constants.hpp"
-#include "memory/cartridge.hpp"
-#include "ppu/ppu.hpp"
-#include "timer/timer.hpp"
+#include "../memory/memory_constants.hpp"
+#include "../memory/cartridge.hpp"
+#include "../ppu/ppu.hpp"
+#include "../timer/timer.hpp"
 
 class MMU {
 public:

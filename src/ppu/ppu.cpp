@@ -28,6 +28,9 @@ PPU::PPU(InterruptController* interrupt_controller) :
     palette[1] = PPU_LIGHT_GRAY;
     palette[2] = PPU_DARK_GRAY;
     palette[3] = PPU_BLACK;
+
+    window_line_counter = 0;
+    window_was_rendered = false;
 }
 
 void PPU::reset() {
@@ -122,6 +125,8 @@ void PPU::write(u16 addr, u8 val) {
                 mode = OAM;
                 ly = 0;
                 cycle_counter = 0;
+                window_line_counter = 0;
+                window_was_rendered = false;
             }
             return;
         }
@@ -221,6 +226,8 @@ void PPU::step(u8 cycles) {
 
             if (ly > PPU_VBLANK_LAST_LINE) {
                 ly = 0;
+                window_line_counter = 0;
+                window_was_rendered = false;
                 check_lyc_interrupt();
                 mode = OAM;
                 update_stat_register();
@@ -234,6 +241,11 @@ void PPU::render_scanline() {
     render_background();
     render_window();
     render_sprites();
+
+    if (window_was_rendered) {
+        window_line_counter++;
+        window_was_rendered = false;
+    }
 
     framebuffer[ly] = line;
 }
@@ -281,10 +293,11 @@ void PPU::render_window() {
     if (!(lcdc & LCDC_BG_AND_WIN_ENABLE_MASK)) return; // Background and Window disabled
     if (!(lcdc & LCDC_WIN_ENABLE_MASK)) return; // Window disabled
     if (ly < wy) return; // Didn't get to the starting point yet
+    if (wx > 166) return;
 
     u16 tile_map_base = (lcdc & LCDC_WIN_TILE_MAP_AREA_MASK) ? BACKGROUND_TILE_MAP1_START : BACKGROUND_TILE_MAP0_START;
     
-    u8 win_y = ly - wy;
+    u8 win_y = window_line_counter;
     u8 tile_row = win_y / 8;
     u8 tile_row_pixel = win_y % 8;
 
@@ -321,6 +334,7 @@ void PPU::render_window() {
 
         line[x] = palette[color_id];
     }
+    window_was_rendered = true;
 }
 
 void PPU::render_sprites() {
@@ -332,9 +346,10 @@ void PPU::render_sprites() {
         u8 y, x;
         u8 tile;
         u8 flags;
+        u8 oam_index;
     };
 
-    Sprite sprites[10];
+    std::vector<Sprite> sprites(10);
     int count = 0;
 
     for (int i = 0; i < 40; i++) {
@@ -348,11 +363,16 @@ void PPU::render_sprites() {
         if (ly < sprite_y || ly >= sprite_y + (sprite_size ? 16 : 8)) continue;
 
         if (count < 10) {
-            sprites[count++] = {y, x, tile, flags};
+            sprites[count++] = {y, x, tile, flags, (u8)i};
         }
     }
 
     if (count == 0) return;
+
+    std::sort(sprites.begin(), sprites.begin() + count, [](const Sprite& a, const Sprite& b) {
+        if (a.x != b.x) return a.x > b.x;
+        return a.oam_index > b.oam_index;
+    });
 
     for (int i = 0; i < count; i++) {
         u8 y = sprites[i].y;

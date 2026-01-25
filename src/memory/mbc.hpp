@@ -1,11 +1,11 @@
 #pragma once
 
-#include "utils/types.hpp"
+#include "../utils/types.hpp"
 
 
 #include <vector>
 #include <iostream>
-#include "memory/memory_constants.hpp"
+#include "../memory/memory_constants.hpp"
 
 class MBC {
 public:

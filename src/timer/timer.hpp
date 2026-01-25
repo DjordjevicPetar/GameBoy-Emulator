@@ -1,9 +1,9 @@
 #pragma once
 
-#include "utils/types.hpp"
+#include "../utils/types.hpp"
 
 
-#include "utils/constants.hpp"
+#include "../utils/constants.hpp"
 
 // Forward declaration
 class InterruptController;

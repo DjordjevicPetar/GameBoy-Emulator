@@ -1,5 +1,5 @@
 #include "timer.hpp"
-#include "interrupt/interrupt_controller.hpp"
+#include "../interrupt/interrupt_controller.hpp"
 
 
 Timer::Timer(InterruptController* interrupt_controller) 
