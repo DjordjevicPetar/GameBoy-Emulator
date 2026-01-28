@@ -6,7 +6,7 @@ PPU::PPU(InterruptController* interrupt_controller) :
     vram(VRAM_SIZE),
     oam(OAM_SIZE),
     palette(PALETTE_SIZE),
-    line(LCD_WIDTH, 0)  // Initialize line buffer for scanline rendering
+    line(LCD_WIDTH, 0)
 {
 
     lcdc = 0x91;

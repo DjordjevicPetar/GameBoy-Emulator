@@ -7,10 +7,11 @@
 #include "../memory/cartridge.hpp"
 #include "../ppu/ppu.hpp"
 #include "../timer/timer.hpp"
+#include "../joypad/joypad.hpp"
 
 class MMU {
 public:
-    MMU(std::string file_path, PPU* ppu, Timer* timer, InterruptController* interrupt_controller);
+    MMU(std::string file_path, PPU* ppu, Timer* timer, InterruptController* interrupt_controller, Joypad* joypad);
 
     u8 read_memory_8(u16 addr) const;
     void write_memory_8(u16 addr, u8 val);
@@ -21,6 +22,7 @@ public:
 private:
     Cartridge cartridge;
     InterruptController* interrupt_controller;
+    Joypad* joypad;
     PPU* ppu;
     Timer* timer;
 
