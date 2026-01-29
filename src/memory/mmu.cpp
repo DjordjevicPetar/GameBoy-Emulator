@@ -1,9 +1,10 @@
 #include "mmu.hpp"
 #include <iostream>
 
-MMU::MMU(std::string file_path, PPU* ppu, Timer* timer, InterruptController* interrupt_controller) :
+MMU::MMU(std::string file_path, PPU* ppu, Timer* timer, InterruptController* interrupt_controller, Joypad* joypad) :
     cartridge(file_path),
     interrupt_controller(interrupt_controller),
+    joypad(joypad),
     ppu(ppu),
     timer(timer),
     wram(INTERNAL_RAM_SIZE, 0),
@@ -32,8 +33,11 @@ u8 MMU::read_memory_8(u16 addr) const {
     }
     else if (addr <= IO_END) {
         if (addr >= IO_START) {
+            if (addr == 0xFF00) {
+                return joypad->read(addr);
+            }
             // Serial port
-            if (addr == 0xFF01) {
+            else if (addr == 0xFF01) {
                 return serial_data_;
             }
             else if (addr == 0xFF02) {
@@ -83,8 +87,12 @@ void MMU::write_memory_8(u16 addr, u8 val) {
     }
     else if (addr <= IO_END) {
         if (addr >= IO_START) {
+            // Joypad
+            if (addr == 0xFF00) {
+                joypad->write(addr, val);
+            }
             // Serial port
-            if (addr == 0xFF01) {
+            else if (addr == 0xFF01) {
                 serial_data_ = val;
             }
             else if (addr == 0xFF02) {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "utils/types.hpp"
+#include "../utils/types.hpp"
 
 
-#include "memory/memory_constants.hpp"
+#include "../memory/memory_constants.hpp"
 #include "mbc.hpp"
 #include <iostream>
 #include <vector>

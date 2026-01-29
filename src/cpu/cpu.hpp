@@ -1,9 +1,9 @@
 #pragma once
 
-#include "utils/types.hpp"
+#include "../utils/types.hpp"
 
 
-#include "utils/constants.hpp"
+#include "../utils/constants.hpp"
 #include "instruction_decoder.hpp"
 #include <string>
 #include <unordered_map>

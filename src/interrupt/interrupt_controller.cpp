@@ -1,5 +1,5 @@
 #include "interrupt_controller.hpp"
-#include "utils/types.hpp"
+#include "../utils/types.hpp"
 #include <stdexcept>
 
 InterruptController::InterruptController() 

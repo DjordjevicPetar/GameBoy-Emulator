@@ -21,7 +21,7 @@ public:
     GameBoyEmulator& operator=(GameBoyEmulator&&) = delete;
     
     void emulate();
-    bool run_until_next_frame();  // Public for headless mode
+    void run_until_next_frame();  // Public for headless mode
 
     static void setFilepath(const std::string& filepath);
     
@@ -30,12 +30,13 @@ public:
 private:
     // Components (order matters for initialization!)
     InterruptController interrupt_controller_;
+    Joypad joypad_;
     PPU ppu_;
     Timer timer_;
     MMU mmu_;
     CPU cpu_;
     
-    bool check_quit_request();
+    void check_events();
 
     // State
     bool stop_cpu_ = false;

@@ -1,9 +1,9 @@
 #include "cpu.hpp"
 #include "instruction_decoder.hpp"
-#include "interrupt/interrupt_controller.hpp"
-#include "utils/logger.hpp"
-#include "memory/mmu.hpp"
-#include "timer/timer.hpp"
+#include "../interrupt/interrupt_controller.hpp"
+#include "../utils/logger.hpp"
+#include "../memory/mmu.hpp"
+#include "../timer/timer.hpp"
 #include <iostream>
 #include <stdexcept>
 

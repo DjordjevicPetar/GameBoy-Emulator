@@ -8,9 +8,10 @@ std::string GameBoyEmulator::filepath_ = "";
 
 GameBoyEmulator::GameBoyEmulator() 
     : interrupt_controller_()
+    , joypad_(&interrupt_controller_)
     , ppu_(&interrupt_controller_)
     , timer_(&interrupt_controller_)
-    , mmu_(filepath_, &ppu_, &timer_, &interrupt_controller_)
+    , mmu_(filepath_, &ppu_, &timer_, &interrupt_controller_, &joypad_)
     , cpu_(&mmu_, &interrupt_controller_)
      {}
 
@@ -25,19 +26,39 @@ void GameBoyEmulator::setFilepath(const std::string& filepath) {
     filepath_ = filepath;
 }
 
-bool GameBoyEmulator::check_quit_request() {
+void GameBoyEmulator::check_events() { // returns true if 'QUIT'
     SDL_Event e;
 
     while (SDL_PollEvent(&e)) {
         if (e.type == SDL_EVENT_QUIT || e.key.scancode == SDL_SCANCODE_ESCAPE) {
             stop_cpu_ = true;
-            return true;
+        }
+        if (e.type == SDL_EVENT_KEY_DOWN) {
+            if (e.key.scancode == SDL_SCANCODE_Q) joypad_.press(Joypad::A);
+            if (e.key.scancode == SDL_SCANCODE_W) joypad_.press(Joypad::B);
+            if (e.key.scancode == SDL_SCANCODE_A) joypad_.press(Joypad::Select);
+            if (e.key.scancode == SDL_SCANCODE_S) joypad_.press(Joypad::Start);
+
+            if (e.key.scancode == SDL_SCANCODE_RIGHT) joypad_.press(Joypad::Right);
+            if (e.key.scancode == SDL_SCANCODE_LEFT) joypad_.press(Joypad::Left);
+            if (e.key.scancode == SDL_SCANCODE_UP) joypad_.press(Joypad::Up);
+            if (e.key.scancode == SDL_SCANCODE_DOWN) joypad_.press(Joypad::Down);
+        }
+        if (e.type == SDL_EVENT_KEY_UP) {
+            if (e.key.scancode == SDL_SCANCODE_Q) joypad_.release(Joypad::A);
+            if (e.key.scancode == SDL_SCANCODE_W) joypad_.release(Joypad::B);
+            if (e.key.scancode == SDL_SCANCODE_A) joypad_.release(Joypad::Select);
+            if (e.key.scancode == SDL_SCANCODE_S) joypad_.release(Joypad::Start);
+
+            if (e.key.scancode == SDL_SCANCODE_RIGHT) joypad_.release(Joypad::Right);
+            if (e.key.scancode == SDL_SCANCODE_LEFT) joypad_.release(Joypad::Left);
+            if (e.key.scancode == SDL_SCANCODE_UP) joypad_.release(Joypad::Up);
+            if (e.key.scancode == SDL_SCANCODE_DOWN) joypad_.release(Joypad::Down);
         }
     }
-    return false;
 }
 
-bool GameBoyEmulator::run_until_next_frame() {
+void GameBoyEmulator::run_until_next_frame() {
     bool next_frame_detected = false;
     int instruction_count = 0;
 
@@ -63,11 +84,11 @@ bool GameBoyEmulator::run_until_next_frame() {
 
         instruction_count++;
         if (instruction_count > 100) {
-            if (check_quit_request()) return !stop_cpu_;
+            check_events();
+            if (stop_cpu_) return;
         }
         // TODO: Audio, etc.
     }
-    return !stop_cpu_;
 }
 
 void GameBoyEmulator::emulate() {
@@ -102,7 +123,6 @@ void GameBoyEmulator::emulate() {
     }
 
     bool running = true;
-    SDL_Event e;
 
     const double target_fps = 59.71;
     const double target_ms = 1000.0 / target_fps;
@@ -110,16 +130,10 @@ void GameBoyEmulator::emulate() {
     u32 last = SDL_GetTicks();
 
     while (running) {
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_EVENT_QUIT) {
-                running = false;
-            }
-            if (e.type == SDL_EVENT_KEY_DOWN && e.key.scancode == SDL_SCANCODE_ESCAPE) {
-                running = false;
-            }
-        }
+        check_events();
         
-        if (!run_until_next_frame()) break;
+        run_until_next_frame();
+        if (stop_cpu_) break;
 
         void* pixels;
         int pitch;
