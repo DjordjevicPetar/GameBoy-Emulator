@@ -14,9 +14,11 @@ public:
         Right, Left, Up, Down
     };
 
+    // Public methods used by input layer for pressing/releasing buttons
     void press(Button b);
     void release(Button b);
 
+    // Read/Write handlers for P1 register
     u8 read(u16 addr);
     void write(u16 addr, u8 val);
 private:
@@ -29,6 +31,7 @@ private:
     u8 dpad;
 
     bool button_state[8];
-
+    
+    // Updates internal button state and triggers joypad interrupts
     void update_button_state(Button b, bool pressed);
 };
