@@ -8,6 +8,7 @@
 class APU {
 public:
     APU();
+    void reset();
     
     u8 read(u16 addr);
     void write(u16 addr, u8 val);
@@ -20,5 +21,13 @@ private:
     WaveChannel ch3;
     NoiseChannel ch4;
 
+    bool enabled = false;
+
+    u16 cycle_counter;
+
     u8 nr52, nr51, nr50;
+
+    void write_nr50(u8 val);
+    void write_nr51(u8 val);
+    void write_nr52(u8 val);
 };
