@@ -47,6 +47,9 @@ static const u16 IO_SIZE = 0x004C;
 static const u16 TIMER_REGS_START = 0xFF04;
 static const u16 TIMER_REGS_END = 0xFF07;
 
+static const u16 APU_REGS_START = 0xFF10;
+static const u16 APU_REGS_END = 0xFF26;
+
 // PPU Registers Address Range
 static const u16 PPU_REGS_START = 0xFF40;
 static const u16 PPU_REGS_END = 0xFF4B;
