@@ -5,6 +5,9 @@
 class SquareChannel {
 public:
     SquareChannel();
+    void reset();
+
+    void step(u8 cycles);
     
     u8 read_nrx0();
     u8 read_nrx1();

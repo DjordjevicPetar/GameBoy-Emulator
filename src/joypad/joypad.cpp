@@ -1,6 +1,7 @@
 #include "joypad.hpp"
 #include <iostream>
 
+// P1 register defaults to all buttons being released (active-low)
 Joypad::Joypad(InterruptController* interrupt_controller)
     : interrupt_controller(interrupt_controller)
     , p1(0xCF)
@@ -8,7 +9,6 @@ Joypad::Joypad(InterruptController* interrupt_controller)
 {}
 
 void Joypad::press(Button b) {
-    
     update_button_state(b, true);
 }
 
@@ -20,6 +20,7 @@ void Joypad::update_button_state(Button b, bool pressed) {
     bool prev = button_state[b];
     button_state[b] = pressed;
 
+    // Joypad interrupt is requested only on button press
     if (!prev && pressed) {
         std::cout << "Pressed";
         interrupt_controller->request_interrupt(INTERRUPT_HANDLER_JOYPAD_ADDRESS);
@@ -28,6 +29,7 @@ void Joypad::update_button_state(Button b, bool pressed) {
     }
 }
 
+// Buttons are active on 0 and multiplexed via select bits
 u8 Joypad::read(u16 addr) {
     u8 ret = p1;
 
@@ -51,6 +53,7 @@ u8 Joypad::read(u16 addr) {
     return ret;
 }
 
+// Only selection bits (4 and 5) are writable; lower bits are read-only
 void Joypad::write(u16 addr, u8 val) {
     p1 = (p1 & 0x0F) | (val & 0x30);
 }
