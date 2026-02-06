@@ -38,7 +38,7 @@ private:
     u8 sweep_timer;
     bool sweep_enabled;
     
-    u8 shadow_register;
+    u16 shadow_register;
     
     // nrx0:
     u8 sweep_pace;
