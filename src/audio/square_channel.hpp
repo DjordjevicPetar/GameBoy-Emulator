@@ -28,7 +28,7 @@ private:
     bool enabled;
     bool dac_enabled;
 
-    u16 period_divider;
+    u16 timer;
 
     u8 env_timer;
     u8 current_volume;
@@ -38,7 +38,7 @@ private:
     u8 sweep_timer;
     bool sweep_enabled;
     
-    u8 shadow_period;
+    u8 shadow_register;
     
     // nrx0:
     u8 sweep_pace;
@@ -59,6 +59,7 @@ private:
 
     // nrx4:
     bool length_enabled;
-    bool trigger_bit;
+
     void trigger();
+    u16 calculate_sweep_new_frequency();
 };
