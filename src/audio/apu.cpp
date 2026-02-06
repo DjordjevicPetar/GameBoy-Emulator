@@ -1,6 +1,11 @@
 #include "apu.hpp"
 
-APU::APU() {
+APU::APU() :
+    ch1(true),
+    ch2(false),
+    ch3(),
+    ch4()
+{
     nr50 = 0;
     nr51 = 0;
     nr52 = 0;
