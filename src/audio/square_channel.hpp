@@ -5,7 +5,7 @@
 class SquareChannel {
 public:
     SquareChannel(bool has_sweep);
-    void reset();
+    void reset() {}
 
     void step(u8 cycles);
     
@@ -20,6 +20,10 @@ public:
     void write_nrx2(u8 val);
     void write_nrx3(u8 val);
     void write_nrx4(u8 val);
+    
+    void clock_envelope();
+    void clock_sound_length();
+    void clock_sweep();
 private:
     bool has_sweep;
 
@@ -28,7 +32,7 @@ private:
     bool enabled;
     bool dac_enabled;
 
-    u16 timer;
+    int timer;
 
     u8 env_timer;
     u8 current_volume;

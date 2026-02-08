@@ -6,6 +6,10 @@ APU::APU() :
     ch3(),
     ch4()
 {
+    enabled = false;
+    cycle_counter = 0;
+    frame_counter = 0;
+
     nr50 = 0;
     nr51 = 0;
     nr52 = 0;
@@ -29,9 +33,31 @@ void APU::reset() {
 
 void APU::step(u8 cycles) {
     cycle_counter += cycles;
+    // Frame squencer works every 8192 CPU instructions (512Hz)
     if (cycle_counter > 8192) {
         cycle_counter -= 8192;
-        // TODO: Handle 
+
+        frame_counter = (frame_counter + 1) % 8;
+
+        switch (frame_counter) {
+            case 0:
+                ch1.clock_sound_length();
+                break;
+            case 2:
+                ch1.clock_sound_length();
+                ch1.clock_sweep();
+                break;
+            case 4:
+                ch1.clock_sound_length();
+                break;
+            case 6:
+                ch1.clock_sound_length();
+                ch1.clock_sweep();
+                break;
+            case 7:
+                ch1.clock_envelope();
+                break;
+        }
     }
 
     ch1.step(cycles);
@@ -68,6 +94,7 @@ u8 APU::read(u16 addr) {
         case 0xFF18: return ch2.read_nrx3();
         case 0xFF19: return ch2.read_nrx4();
     }
+    return DEFAULT_READ_RETURN;
 }
 
 void APU::write(u16 addr, u8 val) {
