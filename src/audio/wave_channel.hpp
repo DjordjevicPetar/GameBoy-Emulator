@@ -2,10 +2,10 @@
 
 class WaveChannel {
 public:
-    WaveChannel();
-    void reset();
+    WaveChannel() {}
+    void reset() {}
 
-    void step(u8 cycles);
+    void step(u8 cycles) {}
 
     u8 read_nr30();
     u8 read_nr31();
