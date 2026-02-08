@@ -110,3 +110,35 @@ u16 SquareChannel::calculate_sweep_new_frequency() {
         return shadow_register + (shadow_register >> sweep_step);
     }
 }
+
+void SquareChannel::step(u8 cycles) {
+    if (!enabled) return;
+
+    timer -= cycles;
+    while (timer <= 0) {
+        timer += (2048 - period) * 4;
+        duty_pos = (duty_pos + 1) % 8;
+    }
+}
+
+void SquareChannel::clock_sweep() {
+    if (!has_sweep) return;
+    if (!sweep_enabled) return;
+    
+    if (sweep_enabled && sweep_step > 0) {
+        // Clock timer
+    }
+    u16 new_freq = calculate_sweep_new_frequency();
+
+    if (new_freq > 2047) {
+        enabled = false;
+    }
+}
+
+void SquareChannel::clock_envelope() {
+
+}
+
+void SquareChannel::clock_sound_length() {
+    
+}

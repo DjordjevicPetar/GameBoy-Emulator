@@ -31,6 +31,7 @@ private:
     // Components (order matters for initialization!)
     InterruptController interrupt_controller_;
     Joypad joypad_;
+    APU apu_;
     PPU ppu_;
     Timer timer_;
     MMU mmu_;

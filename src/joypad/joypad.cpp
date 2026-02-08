@@ -22,16 +22,14 @@ void Joypad::update_button_state(Button b, bool pressed) {
 
     // Joypad interrupt is requested only on button press
     if (!prev && pressed) {
-        std::cout << "Pressed";
-        interrupt_controller->request_interrupt(INTERRUPT_HANDLER_JOYPAD_ADDRESS);
-    } else if (prev && !pressed) {
-        std::cout << "Released";
+        interrupt_controller->request_interrupt(INTERRUPT_JOYPAD_BIT);
     }
 }
 
 // Buttons are active on 0 and multiplexed via select bits
 u8 Joypad::read(u16 addr) {
-    u8 ret = p1;
+    u8 ret = 0xCF;
+    ret |= (p1 & 0x30);
 
     bool select_dpad = !(p1 & 0x10);
     bool select_buttons = !(p1 & 0x20);

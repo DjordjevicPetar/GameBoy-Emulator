@@ -2,10 +2,10 @@
 
 class NoiseChannel {
 public:
-    NoiseChannel();
-    void reset();
+    NoiseChannel() {}
+    void reset() {}
 
-    void step(u8 cycles);
+    void step(u8 cycles) {}
 private:
 
 };

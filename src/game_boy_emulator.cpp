@@ -9,10 +9,12 @@ std::string GameBoyEmulator::filepath_ = "";
 GameBoyEmulator::GameBoyEmulator() 
     : interrupt_controller_()
     , joypad_(&interrupt_controller_)
+    , apu_()
     , ppu_(&interrupt_controller_)
     , timer_(&interrupt_controller_)
-    , mmu_(filepath_, &ppu_, &timer_, &interrupt_controller_, &joypad_)
+    , mmu_(filepath_, &ppu_, &timer_, &interrupt_controller_, &joypad_, &apu_)
     , cpu_(&mmu_, &interrupt_controller_)
+    
      {}
 
 GameBoyEmulator* GameBoyEmulator::getInstance() {

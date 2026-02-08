@@ -21,9 +21,10 @@ private:
     WaveChannel ch3;
     NoiseChannel ch4;
 
-    bool enabled = false;
+    bool enabled;
 
     u16 cycle_counter;
+    u8 frame_counter;
 
     u8 nr52, nr51, nr50;
 
