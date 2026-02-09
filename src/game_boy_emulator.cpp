@@ -134,6 +134,7 @@ void GameBoyEmulator::emulate() {
     // Initialize ppu and mmu dependency
     ppu_.set_mmu(&mmu_);
 
+    // Main emulation loop
     while (running) {
         check_events();
         
@@ -143,7 +144,7 @@ void GameBoyEmulator::emulate() {
         void* pixels;
         int pitch;
 
-        if (SDL_LockTexture(texture, NULL, &pixels, &pitch)) {  // SDL3 returns true on success
+        if (SDL_LockTexture(texture, NULL, &pixels, &pitch)) {
             const std::vector<std::vector<u32>>& fb = ppu_.get_framebuffer();
 
             for (int y = 0; y < LCD_HEIGHT; y++) {
@@ -169,6 +170,7 @@ void GameBoyEmulator::emulate() {
 
         last = SDL_GetTicks();
     }
+
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
