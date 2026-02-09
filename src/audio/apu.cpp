@@ -42,16 +42,20 @@ void APU::step(u8 cycles) {
         switch (frame_counter) {
             case 0:
                 ch1.clock_sound_length();
+                ch2.clock_sound_length();
                 break;
             case 2:
                 ch1.clock_sound_length();
+                ch2.clock_sound_length();
                 ch1.clock_sweep();
                 break;
             case 4:
                 ch1.clock_sound_length();
+                ch2.clock_sound_length();
                 break;
             case 6:
                 ch1.clock_sound_length();
+                ch2.clock_sound_length();
                 ch1.clock_sweep();
                 break;
             case 7:
