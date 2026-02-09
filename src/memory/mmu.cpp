@@ -120,6 +120,11 @@ void MMU::write_memory_8(u16 addr, u8 val) {
             if (addr == 0xFF00) {
                 joypad->write(addr, val);
             }
+            else if (addr == 0xFF46) {
+                // trigger OAM DMA
+                ppu->write_dma(val);
+                return;
+            }
             // Serial Transfer Data
             else if (addr == 0xFF01) {
                 serial_data_ = val;

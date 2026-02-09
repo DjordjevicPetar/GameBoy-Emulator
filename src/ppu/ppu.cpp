@@ -1,4 +1,5 @@
 #include "ppu.hpp"
+#include "../memory/mmu.hpp"
 
 PPU::PPU(InterruptController* interrupt_controller) :
     interrupt_controller(interrupt_controller),
@@ -6,7 +7,8 @@ PPU::PPU(InterruptController* interrupt_controller) :
     vram(VRAM_SIZE),
     oam(OAM_SIZE),
     palette(PALETTE_SIZE),
-    line(LCD_WIDTH, 0)
+    line(LCD_WIDTH, 0),
+    bg_color_id_line(LCD_WIDTH, 0)
 {
 
     lcdc = 0x91;
@@ -238,6 +240,12 @@ void PPU::step(u8 cycles) {
 }
 
 void PPU::render_scanline() {
+    
+    for (int i = 0; i < LCD_WIDTH; i++) {
+        bg_color_id_line[i] = 0;
+        line[i] = palette[0];
+    }
+
     render_background();
     render_window();
     render_sprites();
@@ -285,7 +293,10 @@ void PPU::render_background() {
 
         u8 color_id = (bit1 & 1) << 1 | (bit0 & 1);
 
-        line[x] = palette[color_id];
+        bg_color_id_line[x] = color_id;
+        
+        u8 shade = (bgp >> (color_id * 2)) & 0x03;
+        line[x] = palette[shade];
     }
 }
 
@@ -332,7 +343,10 @@ void PPU::render_window() {
 
         u8 color_id = (bit1 & 1) << 1 | (bit0 & 1);
 
-        line[x] = palette[color_id];
+        bg_color_id_line[x] = color_id;
+        
+        u8 shade = (bgp >> (color_id * 2)) & 0x03;
+        line[x] = palette[shade];
     }
     window_was_rendered = true;
 }
@@ -415,9 +429,10 @@ void PPU::render_sprites() {
 
             if (color_id == 0) continue;
 
-            if (behind_bg) {
-                u32 bg_col = line[screen_x];
-                if (bg_col != palette[0]) continue;
+            bool bg_win_priority = (lcdc & 0x01);
+
+            if (bg_win_priority && behind_bg) {
+                if (bg_color_id_line[screen_x] != 0) continue;
             }
 
             u8 shade = (palette_id >> (color_id * 2)) & 0x03;
@@ -433,4 +448,16 @@ PPUMode PPU::get_mode() {
 
 u8 PPU::get_ly() {
     return ly;
+}
+
+void PPU::write_dma(u8 val) {
+    dma_source = val * 0x100;
+    dma_counter = 0;
+    dma_active = true;
+
+    for (int i = 0; i < 160; ++i) {
+        oam[i] = mmu->read_memory_8(dma_source + i);
+    }
+
+    dma_active = false;
 }
