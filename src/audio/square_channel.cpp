@@ -60,13 +60,13 @@ void SquareChannel::write_nrx2(u8 val) {
 void SquareChannel::write_nrx3(u8 val) {
     nrx3 = val;
 
-    period = (period & 0x0700) | val;
+    frequency = (frequency & 0x0700) | val;
 }
 
 void SquareChannel::write_nrx4(u8 val) {
     nrx4 = val;
 
-    period = (period & 0xFF) | ((val & 0x07) << 8);
+    frequency = (frequency & 0xFF) | ((val & 0x07) << 8);
     length_enabled = (val & 0x40) != 0;
     
     if (val & 0x80) {
@@ -81,20 +81,20 @@ void SquareChannel::trigger() {
         length_timer = 64;
     }
 
-    timer = (2048 - period) * 4;
+    timer = (2048 - frequency) * 4;
 
     env_timer = (env_pace == 0) ? 8 : env_pace;
     current_volume = env_volume;
 
     if (has_sweep) {
-        shadow_register = period;
+        shadow_register = frequency;
 
         sweep_timer = (sweep_pace == 0) ? 8 : sweep_pace;
 
         sweep_enabled = sweep_pace != 0 || sweep_step != 0;
 
         if (sweep_step > 0) {
-            u16 new_freq = calculate_sweep_new_frequency();
+            u16 new_freq = calculate_sweep_frequency();
 
             if (new_freq > 2047) {
                 enabled = false;
@@ -103,7 +103,7 @@ void SquareChannel::trigger() {
     }
 }
 
-u16 SquareChannel::calculate_sweep_new_frequency() {
+u16 SquareChannel::calculate_sweep_frequency() {
     if (sweep_negate) {
         return shadow_register - (shadow_register >> sweep_step);
     } else {
@@ -116,29 +116,73 @@ void SquareChannel::step(u8 cycles) {
 
     timer -= cycles;
     while (timer <= 0) {
-        timer += (2048 - period) * 4;
+        timer += (2048 - frequency) * 4;
         duty_pos = (duty_pos + 1) % 8;
     }
 }
 
 void SquareChannel::clock_sweep() {
     if (!has_sweep) return;
-    if (!sweep_enabled) return;
-    
-    if (sweep_enabled && sweep_step > 0) {
-        // Clock timer
-    }
-    u16 new_freq = calculate_sweep_new_frequency();
 
-    if (new_freq > 2047) {
-        enabled = false;
+    if (sweep_timer > 0) {
+        sweep_timer--;
     }
+
+    if (sweep_timer == 0) {
+        sweep_timer = (sweep_pace == 0) ? 8 : sweep_pace;
+
+        if (sweep_enabled && sweep_pace != 0) {
+            u16 new_freq = calculate_sweep_frequency();
+
+            if (new_freq > 2047) {
+                enabled = false;
+                return;
+            }
+
+            if (sweep_step != 0) {
+                shadow_register = new_freq;
+                frequency = new_freq;
+
+                new_freq = calculate_sweep_frequency();
+
+                if (new_freq > 2047) {
+                    enabled = false;
+                    return;
+                }
+            }
+        } 
+    }
+    
+    
 }
 
 void SquareChannel::clock_envelope() {
+    if (env_pace == 0) return;
 
+    if (env_timer > 0) {
+        env_timer--;
+    }
+
+    if (env_timer == 0) {
+        env_timer = (env_pace == 0) ? 8 : env_pace;
+
+        if (env_increase) {
+            if (current_volume < 15) current_volume++;
+        } else {
+            if (current_volume > 0) current_volume--;
+        }
+    }
 }
 
 void SquareChannel::clock_sound_length() {
-    
+    if (!length_enabled) return;
+
+    if (length_timer > 0) {
+        length_timer--;
+    }
+
+    if (length_timer == 0) {
+        enabled = false;
+        return;
+    }
 }
