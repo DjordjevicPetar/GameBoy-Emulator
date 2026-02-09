@@ -85,6 +85,8 @@ enum PPUMode {
     HBlank, VBlank, OAM, DRAW
 };
 
+class MMU;
+
 class PPU {
 public:
     PPU(InterruptController* interrupt_controller);
@@ -99,7 +101,14 @@ public:
     PPUMode get_mode();
     u8 get_ly();
 
+    void write_dma(u8 value);
+
+    void set_mmu(MMU* mmu_inst) {
+        mmu = mmu_inst;
+    }
 private:
+    MMU* mmu;
+
     uint8_t window_line_counter;
     bool window_was_rendered;
 
@@ -137,5 +146,10 @@ private:
     u8 wx;
 
     std::vector<u32> line;
+    std::vector<u8> bg_color_id_line;
+
+    bool dma_active = false;
+    u16 dma_source = 0;
+    u8 dma_counter = 0;
 };
 

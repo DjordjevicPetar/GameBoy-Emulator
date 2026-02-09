@@ -131,6 +131,9 @@ void GameBoyEmulator::emulate() {
 
     u32 last = SDL_GetTicks();
 
+    // Initialize ppu and mmu dependency
+    ppu_.set_mmu(&mmu_);
+
     while (running) {
         check_events();
         
