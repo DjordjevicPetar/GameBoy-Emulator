@@ -2,7 +2,42 @@
 
 SquareChannel::SquareChannel(bool has_sweep) :
     has_sweep(has_sweep)
-{}
+{
+    reset();
+}
+
+void SquareChannel::reset() {
+    nrx0 = 0;
+    nrx1 = 0;
+    nrx2 = 0;
+    nrx3 = 0;
+    nrx4 = 0;
+
+    enabled = false;
+    dac_enabled = false;
+
+    frequency = 0;
+    timer = 0;
+
+    duty_pos = 0;
+
+    sweep_timer = 0;
+    sweep_enabled = false;
+    shadow_register = 0;
+
+    sweep_pace = 0;
+    sweep_negate = false;
+    sweep_step = 0;
+
+    length_timer = 0;
+    length_enabled = false;
+
+    env_timer = 0;
+    env_pace = 0;
+    env_increase = 0;
+    env_volume = 0;
+    current_volume = 0;
+}
 
 u8 SquareChannel::read_nrx0() {
     return nrx0 | 0x80;
@@ -40,7 +75,7 @@ void SquareChannel::write_nrx1(u8 val) {
     nrx1 = val;
 
     wave_duty = (val >> 6) & 0x03;
-    length_timer = 64 - (val & 0x3F);
+    length_timer = 64 - (val & 0x3F); // Since length_timer is counting up, but my implemetation is counting down
 }
 
 void SquareChannel::write_nrx2(u8 val) {
@@ -66,7 +101,7 @@ void SquareChannel::write_nrx3(u8 val) {
 void SquareChannel::write_nrx4(u8 val) {
     nrx4 = val;
 
-    frequency = (frequency & 0xFF) | ((val & 0x07) << 8);
+    frequency = (frequency & 0x00FF) | ((val & 0x07) << 8);
     length_enabled = (val & 0x40) != 0;
     
     if (val & 0x80) {
@@ -75,7 +110,7 @@ void SquareChannel::write_nrx4(u8 val) {
 }
 
 void SquareChannel::trigger() {
-    enabled = true;
+    enabled = dac_enabled;
 
     if (length_timer == 0) {
         length_timer = 64;
