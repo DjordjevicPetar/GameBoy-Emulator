@@ -43,19 +43,23 @@ void APU::step(u8 cycles) {
             case 0:
                 ch1.clock_sound_length();
                 ch2.clock_sound_length();
+                ch3.clock_sound_length();
                 break;
             case 2:
                 ch1.clock_sound_length();
                 ch2.clock_sound_length();
+                ch3.clock_sound_length();
                 ch1.clock_sweep();
                 break;
             case 4:
                 ch1.clock_sound_length();
                 ch2.clock_sound_length();
+                ch3.clock_sound_length();
                 break;
             case 6:
                 ch1.clock_sound_length();
                 ch2.clock_sound_length();
+                ch3.clock_sound_length();
                 ch1.clock_sweep();
                 break;
             case 7:
@@ -85,19 +89,31 @@ void APU::write_nr52(u8 val) {
 
 u8 APU::read(u16 addr) {
     switch (addr) {
-        // Channel 1
+        // Channel 1 - Square Channel 1
         case 0xFF10: return ch1.read_nrx0();
         case 0xFF11: return ch1.read_nrx1();
         case 0xFF12: return ch1.read_nrx2();
         case 0xFF13: return ch1.read_nrx3();
         case 0xFF14: return ch1.read_nrx4();
 
-        // Channel 2 - doesn't have sweep (nrx0)
+        // Channel 2 - Square Channel 2; doesn't have frequency sweep
         case 0xFF16: return ch2.read_nrx1();
         case 0xFF17: return ch2.read_nrx2();
         case 0xFF18: return ch2.read_nrx3();
         case 0xFF19: return ch2.read_nrx4();
+
+        // Channel 3 - Wave Channel
+        case 0xFF1A: return ch3.read_nr30();
+        case 0xFF1B: return ch3.read_nr31();
+        case 0xFF1C: return ch3.read_nr32();
+        case 0xFF1D: return ch3.read_nr33();
+        case 0xFF1E: return ch3.read_nr34();
     }
+
+    if (addr >= 0xFF30 && addr <= 0xFF3F) {
+        return ch3.read_wave_ram(addr - 0xFF30);
+    }
+
     return DEFAULT_READ_RETURN;
 }
 
@@ -119,10 +135,18 @@ void APU::write(u16 addr, u8 val) {
         case 0xFF18: ch2.write_nrx3(val); break; 
         case 0xFF19: ch2.write_nrx4(val); break; 
 
-        // ...
+        case 0xFF1A: ch3.write_nr30(val); break;
+        case 0xFF1B: ch3.write_nr31(val); break;
+        case 0xFF1C: ch3.write_nr32(val); break;
+        case 0xFF1D: ch3.write_nr33(val); break;
+        case 0xFF1E: ch3.write_nr34(val); break;
 
         case 0xFF24: write_nr50(val); break; // Master volume & VIN panning
         case 0xFF25: write_nr51(val); break; // Sound panning
         case 0xFF26: write_nr52(val); break; // Audio master control
+    }
+
+    if (addr >= 0xFF30 && addr <= 0xFF3F) {
+        ch3.write_wave_ram(addr - 0xFF30, val);
     }
 }

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../memory/memory_constants.hpp"
+#include "../utils/types.hpp"
 
 class SquareChannel {
 public:
     SquareChannel(bool has_sweep);
-    void reset() {}
+    void reset();
 
     void step(u8 cycles);
     
