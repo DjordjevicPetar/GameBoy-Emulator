@@ -51,7 +51,7 @@ private:
 
     // nrx1:
     u8 wave_duty;
-    u8 length_timer;
+    u16 length_timer;
 
     // nrx2:
     u8 env_volume;
@@ -59,11 +59,11 @@ private:
     u8 env_pace;
 
     // nrx3:
-    u16 period; // lower 8 bits from nrx3[7:0], higher 3 bits from nrx4[2:0]
+    u16 frequency; // lower 8 bits from nrx3[7:0], higher 3 bits from nrx4[2:0]
 
     // nrx4:
     bool length_enabled;
 
     void trigger();
-    u16 calculate_sweep_new_frequency();
+    u16 calculate_sweep_frequency();
 };
