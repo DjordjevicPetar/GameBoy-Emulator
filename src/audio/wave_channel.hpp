@@ -24,6 +24,8 @@ public:
     void write_wave_ram(u16 addr, u8 val);
 
     void clock_sound_length();
+
+    u8 output();
 private:
     u8 nr30, nr31, nr32, nr33, nr34;
 
@@ -44,7 +46,7 @@ private:
     u8 output_level;
 
     // nr33:
-    u16 frequency; // lower 8 bits from nr33[7:0], higher 3 bits from nr34[2:0]
+    u16 frequency; // frequency[10:0] = nrx4[2:0]nrx3[7:0]
 
     // nr34:
     bool length_enabled;

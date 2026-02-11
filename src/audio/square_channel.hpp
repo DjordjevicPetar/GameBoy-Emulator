@@ -24,6 +24,8 @@ public:
     void clock_envelope();
     void clock_sound_length();
     void clock_sweep();
+
+    u8 output();
 private:
     bool has_sweep;
 
@@ -59,7 +61,7 @@ private:
     u8 env_pace;
 
     // nrx3:
-    u16 frequency; // lower 8 bits from nrx3[7:0], higher 3 bits from nrx4[2:0]
+    u16 frequency; // frequency[10:0] = nrx4[2:0]nrx3[7:0]
 
     // nrx4:
     bool length_enabled;
