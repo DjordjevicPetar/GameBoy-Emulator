@@ -46,8 +46,9 @@ private:
 
     // nr43:
     u8 clock_shift;
-    bool lfsr_width;
+    bool lfsr_width; // false: 15-bit, true: 7-bit
     u8 clock_divider;
+    u8 divisors[8] = {8, 16, 32, 48, 64, 80, 96, 112};
 
     // nr44:
     bool length_enabled;

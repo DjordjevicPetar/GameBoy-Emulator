@@ -89,11 +89,27 @@ void NoiseChannel::trigger() {
 
     lfsr = 0x7FFF;
     
-    // TODO: timer stuff
+    timer = divisors[clock_divider] << clock_shift;
 }
 
 void NoiseChannel::step(u8 cycles) {
-    // TODO
+    if (!enabled) return;
+
+    timer -= cycles;
+
+    while (timer <= 0) {
+        timer = divisors[clock_divider] << clock_shift;
+
+        u8 resulting_bit = (lfsr & 0x01) ^ ((lfsr >> 1) & 0x01);
+
+        lfsr >>= 1;
+        lfsr |= resulting_bit << 14;
+
+        if (lfsr_width) {
+            lfsr &= (~1 << 6);
+            lfsr |= resulting_bit << 6;
+        }
+    }
 }
 
 void NoiseChannel::clock_envelope() {
