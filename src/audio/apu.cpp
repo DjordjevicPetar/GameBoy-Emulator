@@ -150,3 +150,34 @@ void APU::write(u16 addr, u8 val) {
         ch3.write_wave_ram(addr - 0xFF30, val);
     }
 }
+
+AudioSample APU::mix() {
+    AudioSample out = {0, 0};
+    int left = 0;
+    int right = 0;
+
+    if (!(nr52 & 0x80)) return out;
+
+    int ch1_out = (int)ch1.output() - 8;
+    int ch2_out = (int)ch2.output() - 8;
+    int ch3_out = (int)ch3.output() - 8;
+    int ch4_out = (int)ch4.output() - 8;
+
+    if (nr51 & 0x01) right += ch1_out;
+    if (nr51 & 0x02) right += ch2_out;
+    if (nr51 & 0x04) right += ch3_out;
+    if (nr51 & 0x08) right += ch4_out;
+
+    if (nr51 & 0x10) left += ch1_out;
+    if (nr51 & 0x20) left += ch2_out;
+    if (nr51 & 0x40) left += ch3_out;
+    if (nr51 & 0x80) left += ch4_out;
+
+    right = (right * ((nr50 & 0x07) + 1)) / 8;
+    left = (left * (((nr50 >> 4) & 0x07) + 1)) / 8;
+
+    out.left = left * 512;
+    out.right = right * 512;
+
+    return out;
+}
