@@ -129,3 +129,25 @@ void WaveChannel::clock_sound_length() {
         return;
     }
 }
+
+u8 WaveChannel::output() {
+    if (!enabled || !dac_enabled) return 0;
+
+    u8 byte = wave_ram[wave_position / 2];
+    u8 sample;
+
+    if (wave_position % 2) {
+        sample = byte >> 4;
+    } else {
+        sample = byte & 0x0F;
+    }
+
+    switch (output_level) {
+        case 0: return 0;
+        case 1: return sample;
+        case 2: return sample >> 1;
+        case 3: return sample >> 2;
+    }
+
+    return 0;
+}

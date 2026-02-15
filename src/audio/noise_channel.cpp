@@ -142,3 +142,9 @@ void NoiseChannel::clock_sound_length() {
         return;
     }
 }
+
+u8 NoiseChannel::output() {
+    if (!enabled || !dac_enabled) return 0;
+
+    return (~lfsr & 1) ? current_volume : 0;
+}
