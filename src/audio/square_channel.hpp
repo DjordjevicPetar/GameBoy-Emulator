@@ -45,6 +45,14 @@ private:
     bool sweep_enabled;
     
     u16 shadow_register;
+
+    u8 duty_table[4][8] =
+    {
+        {1, 1, 1, 1, 1, 1, 1, 0},
+        {0, 1, 1, 1, 1, 1, 1, 0},
+        {0, 1, 1, 1, 1, 0, 0, 0},
+        {1, 0, 0, 0, 0, 0, 0, 1}
+    };
     
     // nrx0:
     u8 sweep_pace;

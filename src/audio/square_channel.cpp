@@ -221,3 +221,11 @@ void SquareChannel::clock_sound_length() {
         return;
     }
 }
+
+u8 SquareChannel::output() {
+    if (!enabled || !dac_enabled) return 0;
+
+    u8 bit = duty_table[wave_duty][duty_pos];
+
+    return ~bit ? current_volume : 0;
+}

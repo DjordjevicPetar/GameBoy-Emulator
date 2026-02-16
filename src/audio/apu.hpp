@@ -5,6 +5,11 @@
 #include "wave_channel.hpp"
 #include "noise_channel.hpp"
 
+struct AudioSample {
+    int left;
+    int right;
+};
+
 class APU {
 public:
     APU();
@@ -14,6 +19,8 @@ public:
     void write(u16 addr, u8 val);
 
     void step(u8 cycles);
+
+    AudioSample mix();
 
 private:
     SquareChannel ch1;
