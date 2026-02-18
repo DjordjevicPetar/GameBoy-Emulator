@@ -9,6 +9,7 @@
 #include "interrupt/interrupt_controller.hpp"
 #include <string>
 #include <SDL3/SDL.h>
+#include <deque>
 
 class GameBoyEmulator {
 public:
@@ -43,6 +44,10 @@ private:
     bool stop_cpu_ = false;
     u32 cycles_executed_ = 0;
     static std::string filepath_;
+
+    // Audio
+    u32 cycles_from_audio_sample = 0;
+    std::vector<s16> audio_buffer;
     
     static GameBoyEmulator* instance_;
 };

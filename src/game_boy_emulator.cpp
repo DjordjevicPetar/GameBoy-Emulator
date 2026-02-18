@@ -89,13 +89,25 @@ void GameBoyEmulator::run_until_next_frame() {
             check_events();
             if (stop_cpu_) return;
         }
-        // TODO: Audio, etc.
+        
+        // Handle Audio
+        apu_.step(cycles);
+        cycles_from_audio_sample += cycles;
+
+        while (cycles_from_audio_sample >= 87) {
+            cycles_from_audio_sample -= 87;
+
+            AudioSample sample = apu_.mix();
+
+            audio_buffer.push_back(sample.left);
+            audio_buffer.push_back(sample.right);
+        }
     }
 }
 
 void GameBoyEmulator::emulate() {
     // Initialize SDL
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << std::endl;
         return;
     }
@@ -124,6 +136,22 @@ void GameBoyEmulator::emulate() {
         return;
     }
 
+    // Initialize audio
+    SDL_AudioSpec spec;
+    SDL_zero(spec);
+
+    spec.freq = 48000;
+    spec.format = SDL_AUDIO_S16;
+    spec.channels = 2;
+
+    SDL_AudioStream* audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+
+    if (!audio_stream) {
+        std::cerr << "SDL_AudioStream failed: " << SDL_GetError() << std::endl;
+    }
+
+    SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(audio_stream));
+
     bool running = true;
 
     const double target_fps = 59.71;
@@ -140,6 +168,22 @@ void GameBoyEmulator::emulate() {
         
         run_until_next_frame();
         if (stop_cpu_) break;
+
+        if (!audio_buffer.empty()) {
+            SDL_PutAudioStreamData(
+                audio_stream,
+                audio_buffer.data(),
+                audio_buffer.size() * sizeof(s16)
+            );
+
+            audio_buffer.clear();
+        }
+
+        unsigned long long queued = SDL_GetAudioStreamQueued(audio_stream);
+
+        if (queued > 48000 * sizeof(s16)) {
+            SDL_ClearAudioStream(audio_stream);
+        }
 
         void* pixels;
         int pitch;

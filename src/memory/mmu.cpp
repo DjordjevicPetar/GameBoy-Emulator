@@ -150,11 +150,11 @@ void MMU::write_memory_8(u16 addr, u8 val) {
             }
             // Audio Processing Unit registers
             else if (addr >= APU_REGS_START && addr <= APU_REGS_END) {
-                return apu->write(addr, val);
+                apu->write(addr, val);
             }
             // LCD and Picture Processing Unit registers
             else if (addr >= PPU_REGS_START && addr <= PPU_REGS_END) {
-                return ppu->write(addr, val);
+                ppu->write(addr, val);
             }
         }
     }

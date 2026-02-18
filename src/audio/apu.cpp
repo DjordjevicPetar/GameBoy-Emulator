@@ -44,26 +44,32 @@ void APU::step(u8 cycles) {
                 ch1.clock_sound_length();
                 ch2.clock_sound_length();
                 ch3.clock_sound_length();
+                ch4.clock_sound_length();
                 break;
             case 2:
                 ch1.clock_sound_length();
                 ch2.clock_sound_length();
                 ch3.clock_sound_length();
+                ch4.clock_sound_length();
                 ch1.clock_sweep();
                 break;
             case 4:
                 ch1.clock_sound_length();
                 ch2.clock_sound_length();
                 ch3.clock_sound_length();
+                ch4.clock_sound_length();
                 break;
             case 6:
                 ch1.clock_sound_length();
                 ch2.clock_sound_length();
                 ch3.clock_sound_length();
+                ch4.clock_sound_length();
                 ch1.clock_sweep();
                 break;
             case 7:
                 ch1.clock_envelope();
+                ch2.clock_envelope();
+                ch4.clock_envelope();
                 break;
         }
     }
@@ -84,7 +90,15 @@ void APU::write_nr51(u8 val) {
 
 void APU::write_nr52(u8 val) {
     nr52 = nr52 | (val & 0x80);
-    if (!((nr52 & 0x80) >> 7)) reset();
+
+    bool new_enabled = val & 0x80;
+    bool old_enabled = enabled;
+
+    enabled = new_enabled;
+
+    if (!enabled && old_enabled) {
+        reset();
+    }
 }
 
 u8 APU::read(u16 addr) {
@@ -108,6 +122,12 @@ u8 APU::read(u16 addr) {
         case 0xFF1C: return ch3.read_nr32();
         case 0xFF1D: return ch3.read_nr33();
         case 0xFF1E: return ch3.read_nr34();
+
+        // Channel 4 - Noise Channel
+        case 0xFF20: return ch4.read_nr41();
+        case 0xFF21: return ch4.read_nr42();
+        case 0xFF22: return ch4.read_nr43();
+        case 0xFF23: return ch4.read_nr44();
     }
 
     if (addr >= 0xFF30 && addr <= 0xFF3F) {
@@ -135,11 +155,18 @@ void APU::write(u16 addr, u8 val) {
         case 0xFF18: ch2.write_nrx3(val); break; 
         case 0xFF19: ch2.write_nrx4(val); break; 
 
+        // Channel 3
         case 0xFF1A: ch3.write_nr30(val); break;
         case 0xFF1B: ch3.write_nr31(val); break;
         case 0xFF1C: ch3.write_nr32(val); break;
         case 0xFF1D: ch3.write_nr33(val); break;
         case 0xFF1E: ch3.write_nr34(val); break;
+
+        // Channel 4
+        case 0xFF20: ch4.write_nr41(val); break;
+        case 0xFF21: ch4.write_nr42(val); break;
+        case 0xFF22: ch4.write_nr43(val); break;
+        case 0xFF23: ch4.write_nr44(val); break;
 
         case 0xFF24: write_nr50(val); break; // Master volume & VIN panning
         case 0xFF25: write_nr51(val); break; // Sound panning
