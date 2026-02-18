@@ -1,3 +1,5 @@
+// TODO: Remove the #ifndef/#define/#endif include guard - this is a .cpp file,
+// not a header. Include guards are only meaningful in headers.
 #ifndef MAIN_H_
 #define MAIN_H_
 
@@ -20,6 +22,8 @@ int main(int argc, char* argv[]){
         }
     }
 
+    // TODO: The -h (headless) flag is documented in the usage string but never parsed.
+    // It's used in the Makefile's `diff` target but the emulator ignores it entirely.
     if (rom_path == nullptr) {
         std::cout << "ERROR: Program to execute not given" << std::endl;
         std::cout << "Usage: gameboy [-l] [-h] <rom_file>" << std::endl;

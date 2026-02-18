@@ -187,6 +187,22 @@ void PPU::step(u8 cycles) {
 
     cycle_counter += cycles;
 
+    // TODO(cycle-accuracy): Mode 3 (DRAW) duration is hardcoded at 172 T-cycles, but on
+    // real hardware it varies from 172 to ~289 T-cycles depending on:
+    //  - Number of sprites on the current scanline (each sprite adds ~6-11 cycles)
+    //  - SCX % 8 (initial tile alignment adds 0-7 cycles of penalty)
+    //  - Window trigger mid-scanline (restarts the pixel FIFO)
+    // HBlank duration adjusts to keep total line at 456 T-cycles.
+    // This affects HBlank timing which games use for mid-frame VRAM updates.
+
+    // TODO(cycle-accuracy): STAT interrupt should use an "IRQ line" model. On real HW,
+    // the LCD STAT interrupt is edge-triggered: it only fires when the combined STAT
+    // condition (mode match OR LYC==LY) transitions from LOW to HIGH. The current
+    // implementation fires on every mode change unconditionally, which can produce
+    // duplicate STAT interrupts and break games that rely on exact interrupt timing
+    // (e.g.,Ings/GBVideoPlayer, Road Rash). Fix: track a `stat_irq_line` bool,
+    // compute new line state each step, and only request interrupt on rising edge.
+
     if (mode == OAM) {
         if (cycle_counter >= PPU_OAM_CYCLES) {
             mode = DRAW;
@@ -240,6 +256,12 @@ void PPU::step(u8 cycles) {
 }
 
 void PPU::render_scanline() {
+    // TODO(cycle-accuracy): The entire scanline is rendered at once when entering HBlank.
+    // On real hardware, pixels are pushed out one at a time via the pixel FIFO during
+    // mode 3 (DRAW). This means mid-scanline register changes (SCX, SCY, BGP, palette
+    // writes) take effect immediately on the current pixel. Games like Prehistorik Man
+    // and demos like "oh!" rely on this for raster effects. Implementing a pixel FIFO
+    // would fix these and also give us accurate mode 3 timing for free.
     
     for (int i = 0; i < LCD_WIDTH; i++) {
         bg_color_id_line[i] = 0;
@@ -354,6 +376,12 @@ void PPU::render_window() {
 void PPU::render_sprites() {
     if (!(lcdc & LCDC_OBJ_ENABLE_MASK)) return;
 
+    // TODO(cycle-accuracy): Sprite evaluation (OAM scan) should happen during mode 2
+    // (OAM search, 80 T-cycles), not during rendering. The OAM scan checks 2 sprites
+    // per M-cycle (40 sprites in 80 cycles). The 10-sprite-per-line limit and the
+    // order they're found in affects mode 3 timing and priority. Currently we scan
+    // OAM during render_scanline() which is called at the end of mode 3.
+
     bool sprite_size = lcdc & LCDC_OBJ_SIZE_MASK;
 
     struct Sprite {
@@ -451,6 +479,13 @@ u8 PPU::get_ly() {
 }
 
 void PPU::write_dma(u8 val) {
+    // TODO(cycle-accuracy): OAM DMA takes 160 M-cycles (640 T-cycles) and should
+    // transfer one byte per M-cycle. During DMA, the CPU can ONLY access HRAM
+    // (0xFF80-0xFFFE) - all other reads return 0xFF. Currently the entire 160-byte
+    // transfer happens instantly in zero cycles. This breaks games that rely on
+    // the DMA timing (most games use a small HRAM routine to wait for DMA completion).
+    // Fix: set dma_active=true, track dma_counter, transfer 1 byte per M-cycle in
+    // step(), and have MMU return 0xFF for non-HRAM reads while dma_active.
     dma_source = val * 0x100;
     dma_counter = 0;
     dma_active = true;

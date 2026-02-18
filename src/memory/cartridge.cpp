@@ -61,11 +61,13 @@ void Cartridge::parse_header() {
             mbc = std::make_unique<MBC1>(rom, ram);
             break;
 
+        // TODO: MBC2 (0x05-0x06), MBC3 (0x0F-0x13, includes RTC), and MBC5 (0x19-0x1E)
+        // cover the vast majority of the remaining Game Boy library. MBC3 is needed
+        // for Pokemon Gold/Silver/Crystal, MBC5 for Pokemon Yellow and many later titles.
         default:
             std::cerr << "Error: Unsupported cartridge type 0x" 
                       << std::hex << (int)cartridge_type << std::dec 
                       << ". Only MBC0 (0x00) and MBC1 (0x01-0x03) are supported." << std::endl;
-            // Fallback to MBC0 to avoid crash, but game may not work correctly
             mbc = std::make_unique<MBC0>(rom, ram);
             break;
     }

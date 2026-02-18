@@ -39,6 +39,10 @@ u8 MMU::read_memory_8(u16 addr) const {
     else if (addr <= OAM_END) {
         return ppu->read(addr);
     }
+    // TODO: FEA0-FEFF is the "unusable" region. On DMG it returns 0x00 (not 0xFF).
+    // Currently falls through to the I/O check below, which won't match, then to
+    // HRAM check, which also won't match, returning 0xFF. Should explicitly handle
+    // this range: if (addr >= 0xFEA0 && addr <= 0xFEFF) return 0x00;
     // FF00-FF7F: I/O registers
     else if (addr <= IO_END) {
         if (addr >= IO_START) {
@@ -121,7 +125,9 @@ void MMU::write_memory_8(u16 addr, u8 val) {
                 joypad->write(addr, val);
             }
             else if (addr == 0xFF46) {
-                // trigger OAM DMA
+                // TODO(cycle-accuracy): After triggering DMA, reads from non-HRAM
+                // should return 0xFF until the 160 M-cycle transfer completes.
+                // See also PPU::write_dma() TODO.
                 ppu->write_dma(val);
                 return;
             }

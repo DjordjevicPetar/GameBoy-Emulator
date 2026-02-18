@@ -20,6 +20,8 @@ public:
     u8 read(u16 addr);
     void write(u16 addr, u8 val);
 private:
+    // TODO: These are full copies of the ROM/RAM vectors from Cartridge. For a 2MB
+    // ROM this doubles memory usage. Use const references or std::span instead.
     std::vector<u8> rom;
     std::vector<u8> ram;
 };
