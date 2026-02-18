@@ -78,20 +78,19 @@ u8 CPU::execute_next_instruction() {
     // subtle, platform-dependent bugs. Fix: use a 256-entry lookup table (u8 -> handler)
     // built at init time, where more-specific patterns override less-specific ones.
     // See also: instruction_decoder.cpp registerInstructions().
-    for (auto& [op, handler] : op_handlers_) {
-        if ((current_opcode_ & op.mask) == op.pattern) {
-            u8 cycles = (this->*handler)();
-            
-            if (ei_was_pending) {
-                ime_ = true;
-            }
-            
-            return cycles;
-        }
+    auto handler = op_handlers_[current_opcode_];
+    if (handler == nullptr) {
+        std::cout << "Undefined opcode: " << std::hex << static_cast<int>(current_opcode_) << std::endl;
+        throw std::runtime_error("Undefined opcode");
+    }
+
+    u8 cycles = (this->*handler)();
+    
+    if (ei_was_pending) {
+        ime_ = true;
     }
     
-    std::cout << "Undefined opcode: " << std::hex << static_cast<int>(current_opcode_) << std::endl;
-    throw std::runtime_error("Undefined opcode");
+    return cycles;
 }
 
 u8 CPU::handle_interrupts() {
@@ -131,13 +130,13 @@ u8 CPU::cb_ins_handler() {
     log(__func__);
     current_opcode_ = fetchOpcode();
     
-    for (auto& [op, handler] : cb_handlers_) {
-        if ((current_opcode_ & op.mask) == op.pattern) {
-            return (this->*handler)();
-        }
+    auto handler = cb_handlers_[current_opcode_];
+    if (handler == nullptr) {
+        std::cout << "Undefined CB opcode: " << std::hex << static_cast<int>(current_opcode_) << std::endl;
+        throw std::runtime_error("Undefined CB opcode");
     }
     
-    throw std::runtime_error("Undefined CB opcode");
+    return (this->*handler)();
 }
 
 u16 CPU::fetch_u16() {
