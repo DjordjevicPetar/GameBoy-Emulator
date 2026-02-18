@@ -227,5 +227,5 @@ u8 SquareChannel::output() {
 
     u8 bit = duty_table[wave_duty][duty_pos];
 
-    return ~bit ? current_volume : 0;
+    return bit ? current_volume : 0;
 }
