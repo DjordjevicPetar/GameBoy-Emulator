@@ -48,6 +48,9 @@ u8 WaveChannel::read_nr34() {
 }
 
 u8 WaveChannel::read_wave_ram(u16 addr) {
+    // TODO: When CH3 is active (enabled and DAC on), reading wave RAM should return
+    // the byte at the current wave_position, not the addressed byte. The current
+    // implementation allows free access regardless of channel state.
     return wave_ram[addr & 0x0F];
 }
 
@@ -136,6 +139,10 @@ u8 WaveChannel::output() {
     u8 byte = wave_ram[wave_position / 2];
     u8 sample;
 
+    // TODO(bug): Nibble order is swapped. The Game Boy plays the HIGH nibble first
+    // (even positions) then the LOW nibble (odd positions). Currently even positions
+    // read the low nibble and odd positions read the high nibble - this is backwards.
+    // Fix: swap the branches (even -> byte >> 4, odd -> byte & 0x0F).
     if (wave_position % 2) {
         sample = byte >> 4;
     } else {

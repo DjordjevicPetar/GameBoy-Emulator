@@ -151,5 +151,12 @@ private:
     bool dma_active = false;
     u16 dma_source = 0;
     u8 dma_counter = 0;
+
+    // TODO: Add `bool stat_irq_line = false;` to implement edge-triggered STAT
+    // interrupt. Compute the combined condition each step:
+    //   new_line = (mode==HBlank && hblank_int_en) || (mode==VBlank && vblank_int_en)
+    //           || (mode==OAM && oam_int_en) || (ly==lyc && lyc_int_en);
+    // Only request INTERRUPT_LCD_STAT_BIT when !stat_irq_line && new_line (rising edge).
+    // Then set stat_irq_line = new_line.
 };
 

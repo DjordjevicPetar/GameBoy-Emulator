@@ -56,6 +56,8 @@ void Logger::log(u8 A, u8 F, u8 B, u8 C,
                  u8 mem0, u8 mem1, u8 mem2, u8 mem3) {
     if (!enabled || !log_file.is_open()) return;
 
+    // TODO: "PC: 00:XXXX" hardcodes ROM bank 00. For MBC-banked ROMs, PC in
+    // 0x4000-0x7FFF should show the current ROM bank number, not always 00.
     log_file << std::hex << std::uppercase << std::setfill('0');
     log_file << "A: " << std::setw(2) << (int)A
              << " F: " << std::setw(2) << (int)F

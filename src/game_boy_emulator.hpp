@@ -26,6 +26,8 @@ public:
 
     static void setFilepath(const std::string& filepath);
     
+    // TODO: Singleton with raw `new` leaks memory (instance_ is never deleted).
+    // Either use a static local variable or std::unique_ptr for the instance.
     static GameBoyEmulator* getInstance();
 
 private:

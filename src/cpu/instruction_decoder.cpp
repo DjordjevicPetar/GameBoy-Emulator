@@ -6,6 +6,16 @@ void InstructionDecoder::initializeHandlers(CPU* cpu) {
     registerCbInstructions(cpu);
 }
 
+// TODO(bug/critical): This uses an unordered_map for instruction dispatch. The CPU
+// iterates all entries and takes the FIRST match, but unordered_map iteration order
+// is non-deterministic. Multiple patterns can match the same opcode:
+//   - 0x76 (HALT) matches both Op(0xFF,0x76) AND Op(0xC0,0x40) (LD r,r')
+//   - 0x36 (LD (HL),n) matches both Op(0xFF,0x36) AND Op(0xC7,0x06) (LD r,n)
+//   - 0x70-0x75 (LD (HL),r) match both Op(0xF8,0x70) AND Op(0xC0,0x40) (LD r,r')
+// If the wrong handler runs, the emulator silently produces incorrect behavior.
+// FIX: Replace with a flat std::array<handler_ptr, 256> lookup table. Build it by
+// first filling broad patterns, then overwriting with more-specific ones. This also
+// eliminates the per-instruction linear scan, giving O(1) dispatch.
 void InstructionDecoder::registerInstructions(CPU* cpu) {
     auto& handlers = cpu->op_handlers_;
     

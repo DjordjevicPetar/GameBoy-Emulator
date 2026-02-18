@@ -33,7 +33,8 @@ void APU::reset() {
 
 void APU::step(u8 cycles) {
     cycle_counter += cycles;
-    // Frame squencer works every 8192 CPU instructions (512Hz)
+    // TODO: Comment says "CPU instructions" but should say "T-cycles" (4,194,304 Hz / 512 Hz = 8192 T-cycles).
+    // Also should use >= not > for the comparison to avoid 1-cycle drift.
     if (cycle_counter > 8192) {
         cycle_counter -= 8192;
 
@@ -129,6 +130,12 @@ u8 APU::read(u16 addr) {
         case 0xFF22: return ch4.read_nr43();
         case 0xFF23: return ch4.read_nr44();
     }
+
+    // TODO(bug): NR50 (0xFF24), NR51 (0xFF25), NR52 (0xFF26) reads are not handled.
+    // NR52 read should return: bit 7 = master enable, bits 3-0 = channel active status
+    // (ch1=bit0, ch2=bit1, ch3=bit2, ch4=bit3), bits 6-4 always read as 1.
+    // NR50 and NR51 should return their stored values.
+    // Missing cases: 0xFF24 -> nr50, 0xFF25 -> nr51, 0xFF26 -> nr52 | status bits.
 
     if (addr >= 0xFF30 && addr <= 0xFF3F) {
         return ch3.read_wave_ram(addr - 0xFF30);

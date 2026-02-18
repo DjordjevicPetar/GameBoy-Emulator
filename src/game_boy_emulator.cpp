@@ -61,11 +61,24 @@ void GameBoyEmulator::check_events() { // returns true if 'QUIT'
 }
 
 void GameBoyEmulator::run_until_next_frame() {
+    // TODO(cycle-accuracy): This loop steps the CPU one full instruction at a time,
+    // then feeds ALL cycles to timer/PPU/APU at once. On real hardware, the CPU, PPU,
+    // and timer all advance in lockstep every T-cycle (or at minimum every M-cycle = 4 T).
+    // This means mid-instruction memory accesses (e.g., 16-bit writes during PUSH/CALL,
+    // multi-byte reads during fetch_u16) should interleave with PPU/timer updates.
+    // To pass blargg's mem_timing, mem_timing-2, and instr_timing tests, we need to
+    // step components per M-cycle (4 T-cycles) instead of per instruction.
+    // Approach: CPU returns cycles consumed per M-cycle step, and after each M-cycle
+    // we tick timer, PPU, and APU by 4 T-cycles.
     bool next_frame_detected = false;
     int instruction_count = 0;
 
     while (!next_frame_detected && !stop_cpu_) {
         u8 cycles = cpu_.execute_next_instruction();
+        // TODO(cycle-accuracy): Interrupt dispatch should happen BETWEEN instructions,
+        // not be added to the previous instruction's cycles. The 20-cycle interrupt
+        // dispatch (5 M-cycles: 2 wait + 2 push + 1 jump) should also tick PPU/timer
+        // on each M-cycle, not all at once after the fact.
         cycles += cpu_.handle_interrupts();
         cycles_executed_ += cycles;
         
@@ -159,7 +172,9 @@ void GameBoyEmulator::emulate() {
 
     u32 last = SDL_GetTicks();
 
-    // Initialize ppu and mmu dependency
+    // TODO: Circular dependency (PPU needs MMU, MMU needs PPU) is resolved with a
+    // post-construction setter. Consider restructuring so PPU reads VRAM/OAM directly
+    // from its own memory, and only uses MMU for DMA source reads.
     ppu_.set_mmu(&mmu_);
 
     // Main emulation loop

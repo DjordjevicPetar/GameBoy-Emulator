@@ -64,7 +64,10 @@ void NoiseChannel::write_nr43(u8 val) {
     nr43 = val;
 
     clock_shift = (val >> 4) & 0x0F;
-    lfsr_width = (val & 0x80) != 0;
+    // TODO(bug): LFSR width is bit 3 of NR43, not bit 7. Bit 7 is part of clock_shift.
+    // NR43 layout: bits 7-4 = clock shift, bit 3 = width mode, bits 2-0 = divider.
+    // Fix: (val & 0x08) != 0
+    lfsr_width = (val & 0x08) != 0;
     clock_divider = val & 0x07;
 }
 void NoiseChannel::write_nr44(u8 val) {
@@ -106,8 +109,11 @@ void NoiseChannel::step(u8 cycles) {
         lfsr |= resulting_bit << 14;
 
         if (lfsr_width) {
-            lfsr &= (~1 << 6);
-            lfsr |= resulting_bit << 6;
+        // TODO(bug): The mask (~1 << 6) is incorrect due to operator precedence.
+        // ~1 is 0xFFFFFFFE (all bits set except bit 0), then << 6 gives 0xFFFFFF80,
+        // which clears bits 0-6 instead of just bit 6. Should be: ~(1 << 6).
+        lfsr &= ~(1 << 6);
+        lfsr |= resulting_bit << 6;
         }
     }
 }

@@ -56,9 +56,13 @@ void CPU::log(const std::string& func_name, const std::string& details) {
 }
 
 u8 CPU::execute_next_instruction() {
-    // If halted, just return cycles without executing
+    // TODO(cycle-accuracy): When halted, the CPU should advance 4 T-cycles at a time
+    // until an interrupt wakes it. Currently we return 4 which is correct per call,
+    // but the caller adds interrupt handling cycles on top. On real HW, the wake-up
+    // from HALT has specific timing: the interrupt is serviced on the NEXT M-cycle
+    // after the IF bit is set, and there's an additional 4 T-cycle delay.
     if (halted_) {
-        return 4; // Return minimal cycles while halted
+        return 4;
     }
     
     // Handle delayed EI (IME is set after the instruction following EI)
@@ -67,11 +71,17 @@ u8 CPU::execute_next_instruction() {
     
     current_opcode_ = fetchOpcode();
     
+    // TODO(bug): Using unordered_map with pattern matching is dangerous because iteration
+    // order is non-deterministic. When multiple patterns match the same opcode (e.g. opcode
+    // 0x76 matches both op_ld_r_r mask=0xC0/pat=0x40 AND op_halt mask=0xFF/pat=0x76),
+    // the wrong handler may be called depending on hash bucket ordering. This WILL cause
+    // subtle, platform-dependent bugs. Fix: use a 256-entry lookup table (u8 -> handler)
+    // built at init time, where more-specific patterns override less-specific ones.
+    // See also: instruction_decoder.cpp registerInstructions().
     for (auto& [op, handler] : op_handlers_) {
         if ((current_opcode_ & op.mask) == op.pattern) {
             u8 cycles = (this->*handler)();
             
-            // Enable IME after the instruction if EI was executed
             if (ei_was_pending) {
                 ime_ = true;
             }
@@ -137,9 +147,17 @@ u16 CPU::fetch_u16() {
 }
 
 void CPU::push_to_stack(u16 value) {
+    // TODO(cycle-accuracy): On real hardware PUSH is 4 M-cycles:
+    // M1: internal delay (SP decremented)
+    // M2: write high byte to --SP
+    // M3: write low byte to --SP
+    // M4: (part of the instruction that called push)
+    // Each write should tick PPU/timer. The high byte is written FIRST at SP-1,
+    // then low byte at SP-2. Current bulk approach won't reproduce effects where
+    // games rely on mid-push PPU state (e.g., push during mode transitions).
     sp_ -= 2;
-    mmu_->write_memory_8(sp_ + 1, value >> 8);      // HIGH byte
-    mmu_->write_memory_8(sp_, value & 0xFF);        // LOW byte
+    mmu_->write_memory_8(sp_ + 1, value >> 8);
+    mmu_->write_memory_8(sp_, value & 0xFF);
 }
 
 u16 CPU::pop_from_stack() {
@@ -1231,33 +1249,36 @@ u8 CPU::op_rst_imm() {
 // Miscellaneous instructions
 u8 CPU::op_halt() {
     log(__func__);
-    // HALT instruction - CPU stops until interrupt
-    
-    // HALT bug: if IME=0 but there's a pending interrupt,
-    // the CPU doesn't halt but the PC fails to increment after HALT.
-    // This causes the next instruction to be executed twice.
+    // TODO(cycle-accuracy): The HALT bug has additional edge cases not handled here:
+    // 1. If IME=1 and there's a pending interrupt, CPU doesn't halt - it immediately
+    //    services the interrupt (the HALT itself consumes 4 cycles then ISR runs).
+    // 2. If IME=0 and IE&IF!=0, the HALT bug triggers: the byte after HALT is read
+    //    twice (PC fails to increment). But the exact behavior differs based on
+    //    whether the next instruction is a multi-byte one (can corrupt execution).
+    // 3. There's a 4-cycle delay after HALT before the CPU actually stops.
     if (!ime_ && interrupt_controller_->has_pending_interrupt()) {
         halt_bug_triggered_ = true;
-        // Don't set halted_ - CPU continues immediately
     } else {
         halted_ = true;
     }
-    return 4; // 4 cycles
+    return 4;
 }
 
 u8 CPU::op_stop() {
     log(__func__);
-    // STOP instruction - CPU and GPU stop
-    // GameBoyEmulator will handle the stop condition
+    // TODO: STOP is a 2-byte instruction (0x10 0x00) but we only consume the prefix.
+    // The second byte (0x00) should be fetched and discarded. Without this, the 0x00
+    // is left in the stream and treated as a NOP, which happens to work by accident
+    // but is incorrect. Also, STOP should halt CPU & LCD until a button is pressed
+    // (on CGB it triggers a speed switch if the KEY1 register is prepared).
     mmu_->write_memory_8(TIMER_REGISTER_DIV, 0x00);
-    return 4; // 4 cycles
+    return 4;
 }
 
 u8 CPU::op_di() {
     log(__func__);
     ime_ = false;
-    // TODO: Add interrupt handling
-    return 4; // 4 cycles
+    return 4;
 }
 
 u8 CPU::op_ei() {
