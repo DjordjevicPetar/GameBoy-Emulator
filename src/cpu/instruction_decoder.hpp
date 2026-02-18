@@ -1,39 +1,29 @@
+// TODO(refactor): This class is tightly coupled to CPU (friend access, CPU-specific
+// function pointers) and has no state - it's just a bag of static functions.
+// Option A: Make add_instruction a template utility and move registration into
+//           CPU::initializeHandlers(). InstructionDecoder becomes a small generic
+//           utility (or just a free function) with zero CPU dependency.
+// Option B: Turn this into a namespace instead of a class.
+// Either way, the mask/pattern registration calls belong in CPU since they reference
+// CPU's own methods. add_instruction + find_first_zero are generic utilities.
 #pragma once
 
 #include "../utils/types.hpp"
 
+#include <array>
 
-#include <cstddef>
-
-// Forward declaration
 class CPU;
+
+using Handler = u8 (CPU::*)();
 
 class InstructionDecoder {
 public:
-    // Op struct for instruction pattern matching
-    struct Op {
-        u8 mask;
-        u8 pattern;
-
-        Op(u8 m, u8 p) : mask(m), pattern(p) {}
-
-        bool operator==(const Op& other) const {
-            return mask == other.mask && pattern == other.pattern;
-        }
-    };
-
-    // Hash function for Op struct (for use in unordered_map)
-    struct OpHash {
-        std::size_t operator()(const Op& op) const {
-            return (static_cast<std::size_t>(op.mask) << 8) | op.pattern;
-        }
-    };
-
-    // Initialize and register all instruction handlers
     static void initializeHandlers(CPU* cpu);
     
 private:
     static void registerInstructions(CPU* cpu);
     static void registerCbInstructions(CPU* cpu);
+    static void add_instruction(std::array<Handler, 256>& table, u8 mask, u8 pattern, Handler handler);
+    static u8 find_first_zero(u8 value);
 };
 

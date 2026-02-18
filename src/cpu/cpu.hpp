@@ -6,7 +6,7 @@
 #include "../utils/constants.hpp"
 #include "instruction_decoder.hpp"
 #include <string>
-#include <unordered_map>
+#include <array>
 
 // Forward declarations
 class MMU;
@@ -50,10 +50,8 @@ private:
     u16 sp_ = 0;
     u16 pc_ = PROGRAM_COUNTER_START;
 
-    // Instruction handlers
-    using HandlerMap = std::unordered_map<InstructionDecoder::Op, u8 (CPU::*)(), InstructionDecoder::OpHash>;
-    HandlerMap op_handlers_;
-    HandlerMap cb_handlers_;
+    std::array<Handler, 256> op_handlers_{};
+    std::array<Handler, 256> cb_handlers_{};
 
     // Register access helpers - 8-bit
     u8 getA() const { return (af_ >> 8) & 0xFF; }
