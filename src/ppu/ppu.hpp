@@ -145,6 +145,8 @@ private:
 
     void oam_scan();
 
+    void update_stat_irq();
+
     u8 lcdc;
     u8 stat;
     u8 scy;
@@ -168,11 +170,8 @@ private:
     int line_sprite_count;
     bool line_sprite_size;
 
-    // TODO: Add `bool stat_irq_line = false;` to implement edge-triggered STAT
-    // interrupt. Compute the combined condition each step:
-    //   new_line = (mode==HBlank && hblank_int_en) || (mode==VBlank && vblank_int_en)
-    //           || (mode==OAM && oam_int_en) || (ly==lyc && lyc_int_en);
-    // Only request INTERRUPT_LCD_STAT_BIT when !stat_irq_line && new_line (rising edge).
-    // Then set stat_irq_line = new_line.
+    int draw_cycles_needed;
+
+    bool stat_irq_line;
 };
 
