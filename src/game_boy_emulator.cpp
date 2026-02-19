@@ -233,5 +233,10 @@ void GameBoyEmulator::emulate() {
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+
+    SDL_FlushAudioStream(audio_stream);
+    SDL_UnbindAudioStream(audio_stream);
+    SDL_DestroyAudioStream(audio_stream);
+    
     SDL_Quit();
 }
