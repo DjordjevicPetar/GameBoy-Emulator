@@ -89,6 +89,13 @@ class MMU;
 
 class PPU {
 public:
+    struct Sprite {
+        u8 y, x;
+        u8 tile;
+        u8 flags;
+        u8 oam_index;
+    };
+
     PPU(InterruptController* interrupt_controller);
     void reset();
     void step(u8 cycles);
@@ -133,6 +140,8 @@ private:
 
     void clear_framebuffer();
 
+    void oam_scan();
+
     u8 lcdc;
     u8 stat;
     u8 scy;
@@ -151,6 +160,10 @@ private:
     bool dma_active = false;
     u16 dma_source = 0;
     u8 dma_counter = 0;
+
+    std::vector<Sprite> line_sprites;
+    int line_sprite_count;
+    bool line_sprite_size;
 
     // TODO: Add `bool stat_irq_line = false;` to implement edge-triggered STAT
     // interrupt. Compute the combined condition each step:

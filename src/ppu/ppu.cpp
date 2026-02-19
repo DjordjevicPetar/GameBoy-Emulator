@@ -33,6 +33,10 @@ PPU::PPU(InterruptController* interrupt_controller) :
 
     window_line_counter = 0;
     window_was_rendered = false;
+
+    line_sprites = std::vector<Sprite>(10);
+    line_sprite_count = 0;
+    line_sprite_size = false;
 }
 
 void PPU::reset() {
@@ -207,6 +211,7 @@ void PPU::step(u8 cycles) {
         if (cycle_counter >= PPU_OAM_CYCLES) {
             mode = DRAW;
             update_stat_register();
+            oam_scan();
         }
     }
     else if (mode == DRAW) {
@@ -253,6 +258,34 @@ void PPU::step(u8 cycles) {
             }
         }
     }
+}
+
+void PPU::oam_scan() {
+    line_sprite_count = 0;
+
+    line_sprite_size = lcdc & LCDC_OBJ_SIZE_MASK;
+
+    for (int i = 0; i < 40; i++) {
+        u8 y = oam[i * 4 + 0];
+        u8 x = oam[i * 4 + 1];
+        u8 tile = oam[i * 4 + 2];
+        u8 flags = oam[i * 4 + 3];
+
+        int sprite_y = y - 16;
+
+        if (ly < sprite_y || ly >= sprite_y + (line_sprite_size ? 16 : 8)) continue;
+
+        if (line_sprite_count < 10) {
+            line_sprites[line_sprite_count++] = {y, x, tile, flags, (u8)i};
+        }
+    }
+
+    if (line_sprite_count == 0) return;
+
+    std::sort(line_sprites.begin(), line_sprites.begin() + line_sprite_count, [](const Sprite& a, const Sprite& b) {
+        if (a.x != b.x) return a.x > b.x;
+        return a.oam_index > b.oam_index;
+    });
 }
 
 void PPU::render_scanline() {
@@ -376,51 +409,11 @@ void PPU::render_window() {
 void PPU::render_sprites() {
     if (!(lcdc & LCDC_OBJ_ENABLE_MASK)) return;
 
-    // TODO(cycle-accuracy): Sprite evaluation (OAM scan) should happen during mode 2
-    // (OAM search, 80 T-cycles), not during rendering. The OAM scan checks 2 sprites
-    // per M-cycle (40 sprites in 80 cycles). The 10-sprite-per-line limit and the
-    // order they're found in affects mode 3 timing and priority. Currently we scan
-    // OAM during render_scanline() which is called at the end of mode 3.
-
-    bool sprite_size = lcdc & LCDC_OBJ_SIZE_MASK;
-
-    struct Sprite {
-        u8 y, x;
-        u8 tile;
-        u8 flags;
-        u8 oam_index;
-    };
-
-    std::vector<Sprite> sprites(10);
-    int count = 0;
-
-    for (int i = 0; i < 40; i++) {
-        u8 y = oam[i * 4 + 0];
-        u8 x = oam[i * 4 + 1];
-        u8 tile = oam[i * 4 + 2];
-        u8 flags = oam[i * 4 + 3];
-
-        int sprite_y = y - 16;
-
-        if (ly < sprite_y || ly >= sprite_y + (sprite_size ? 16 : 8)) continue;
-
-        if (count < 10) {
-            sprites[count++] = {y, x, tile, flags, (u8)i};
-        }
-    }
-
-    if (count == 0) return;
-
-    std::sort(sprites.begin(), sprites.begin() + count, [](const Sprite& a, const Sprite& b) {
-        if (a.x != b.x) return a.x > b.x;
-        return a.oam_index > b.oam_index;
-    });
-
-    for (int i = 0; i < count; i++) {
-        u8 y = sprites[i].y;
-        u8 x = sprites[i].x;
-        u8 tile = sprites[i].tile;
-        u8 flags = sprites[i].flags;
+    for (int i = 0; i < line_sprite_count; i++) {
+        u8 y = line_sprites[i].y;
+        u8 x = line_sprites[i].x;
+        u8 tile = line_sprites[i].tile;
+        u8 flags = line_sprites[i].flags;
 
         int sprite_y = y - 16;
         int sprite_x = x - 8;
@@ -432,10 +425,10 @@ void PPU::render_sprites() {
 
         int local_y = ly - sprite_y;
         if (flip_y) {
-            local_y = (sprite_size ? 15 : 7) - local_y;
+            local_y = (line_sprite_size ? 15 : 7) - local_y;
         }
 
-        if (sprite_size) {
+        if (line_sprite_size) {
             tile &= 0xFE; // bit0 not used
         }
 
