@@ -37,6 +37,7 @@ u8 MMU::read_memory_8(u16 addr) const {
     }
     // FE00-FE9F: Object Attribute Memory (OAM)
     else if (addr <= OAM_END) {
+        if (ppu->is_dma_active()) return DEFAULT_READ_RETURN;
         return ppu->read(addr);
     }
     // TODO: FEA0-FEFF is the "unusable" region. On DMG it returns 0x00 (not 0xFF).
@@ -115,6 +116,7 @@ void MMU::write_memory_8(u16 addr, u8 val) {
     }
     // FE00-FE9F: Object Attribute Memory (OAM)
     else if (addr <= OAM_END) {
+        if (ppu->is_dma_active()) return;
         ppu->write(addr, val);
     }
     // FF00-FF7F: I/O registers

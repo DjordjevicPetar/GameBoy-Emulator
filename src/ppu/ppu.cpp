@@ -201,9 +201,20 @@ void PPU::step(u8 cycles) {
     // HBlank duration adjusts to keep total line at 456 T-cycles.
     // This affects HBlank timing which games use for mid-frame VRAM updates.
 
+    if (dma_active) {
+        int m_cycles = cycles / 4;
+        for (int i = 0; i < m_cycles && dma_counter < 160; i++) {
+            oam[dma_counter] = mmu->read_memory_8(dma_source + dma_counter);
+            dma_counter++;
+        }
+
+        if (dma_counter >= 160) {
+            dma_active = false;
+        }
+    }
+
     if (mode == OAM) {
         if (!oam_scanned) {
-            oam_scan();
             oam_scanned = true;
 
             draw_cycles_needed = PPU_DRAW_CYCLES;
@@ -212,6 +223,7 @@ void PPU::step(u8 cycles) {
         }
 
         if (cycle_counter >= PPU_OAM_CYCLES) {
+            oam_scan();
             mode = DRAW;
             update_stat_register();
             update_stat_irq();
@@ -477,22 +489,11 @@ u8 PPU::get_ly() {
 }
 
 void PPU::write_dma(u8 val) {
-    // TODO(cycle-accuracy): OAM DMA takes 160 M-cycles (640 T-cycles) and should
-    // transfer one byte per M-cycle. During DMA, the CPU can ONLY access HRAM
-    // (0xFF80-0xFFFE) - all other reads return 0xFF. Currently the entire 160-byte
-    // transfer happens instantly in zero cycles. This breaks games that rely on
-    // the DMA timing (most games use a small HRAM routine to wait for DMA completion).
-    // Fix: set dma_active=true, track dma_counter, transfer 1 byte per M-cycle in
-    // step(), and have MMU return 0xFF for non-HRAM reads while dma_active.
+    // TODO(cycle-accuracy): During DMA, the CPU can ONLY access HRAM (tried, but
+    // this breaks everything)
     dma_source = val * 0x100;
     dma_counter = 0;
     dma_active = true;
-
-    for (int i = 0; i < 160; ++i) {
-        oam[i] = mmu->read_memory_8(dma_source + i);
-    }
-
-    dma_active = false;
 }
 
 bool PPU::is_dma_active() {
