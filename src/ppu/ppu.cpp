@@ -25,6 +25,7 @@ PPU::PPU(InterruptController* interrupt_controller) :
 
     mode = OAM;
     cycle_counter = 0;
+    oam_scanned = false;
 
     palette[0] = PPU_WHITE;
     palette[1] = PPU_LIGHT_GRAY;
@@ -208,10 +209,14 @@ void PPU::step(u8 cycles) {
     // compute new line state each step, and only request interrupt on rising edge.
 
     if (mode == OAM) {
+        if (!oam_scanned) {
+            oam_scan();
+            oam_scanned = true;
+        }
+
         if (cycle_counter >= PPU_OAM_CYCLES) {
             mode = DRAW;
             update_stat_register();
-            oam_scan();
         }
     }
     else if (mode == DRAW) {
@@ -227,6 +232,7 @@ void PPU::step(u8 cycles) {
             cycle_counter -= PPU_FULL_LINE_CYCLES;
             ly++;
             check_lyc_interrupt();
+            oam_scanned = false;
 
             if (ly == PPU_VBLANK_FIRST_LINE) {
                 mode = VBlank;
@@ -246,6 +252,7 @@ void PPU::step(u8 cycles) {
             cycle_counter -= PPU_FULL_LINE_CYCLES;
             ly++;
             check_lyc_interrupt();
+            oam_scanned = false;
 
             if (ly > PPU_VBLANK_LAST_LINE) {
                 ly = 0;
@@ -488,4 +495,8 @@ void PPU::write_dma(u8 val) {
     }
 
     dma_active = false;
+}
+
+bool PPU::is_dma_active() {
+    return dma_active;
 }

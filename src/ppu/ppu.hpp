@@ -109,6 +109,7 @@ public:
     u8 get_ly();
 
     void write_dma(u8 value);
+    bool is_dma_active();
 
     void set_mmu(MMU* mmu_inst) {
         mmu = mmu_inst;
@@ -128,6 +129,8 @@ private:
 
     PPUMode mode;
     int cycle_counter;
+    
+    bool oam_scanned;
 
     void render_scanline();
 
