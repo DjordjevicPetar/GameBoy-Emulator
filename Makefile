@@ -47,22 +47,5 @@ build: clean
 
 run: build
 	$(RUN_PREFIX)$(TARGET) $(ARGS)
-
-# Run with logging and compare to reference (headless for speed, 5 sec timeout)
-diff: build
-	-$(RM) cpu_log.txt
-	@$(RUN_PREFIX)$(TARGET) $(ARGS) -l -h & PID=$$!; sleep 5; kill $$PID 2>/dev/null; wait $$PID 2>/dev/null || true
-	@FIRST_DIFF=$$(diff cpu_log.txt EpicLog.txt 2>/dev/null | grep -m1 "^[0-9]" | cut -d',' -f1); \
-	if [ -n "$$FIRST_DIFF" ]; then \
-		echo "=== First difference at line: $$FIRST_DIFF ==="; \
-		echo ""; \
-		echo "--- cpu_log.txt (yours) ---"; \
-		sed -n "$${FIRST_DIFF}p" cpu_log.txt; \
-		echo ""; \
-		echo "--- EpicLog.txt (reference) ---"; \
-		sed -n "$${FIRST_DIFF}p" EpicLog.txt; \
-	else \
-		echo "No differences found or files missing"; \
-	fi
 endif
 

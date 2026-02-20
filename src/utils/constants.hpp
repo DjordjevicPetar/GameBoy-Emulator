@@ -2,8 +2,6 @@
 
 #include "../utils/types.hpp"
 
-
-
 // CPU Constants
 static const u16 PROGRAM_COUNTER_START = 0x0100;
 
@@ -22,8 +20,3 @@ static const u8 INTERRUPT_JOYPAD_BIT = 4;
 // Interrupt register locations
 static const u16 IE_REGISTER_LOCATION = 0xFFFF;
 static const u16 IF_REGISTER_LOCATION = 0xFF0F;
-
-// Timer Frequencies
-static const u32 DIV_FREQUENCY = 16384;
-static const u32 TAC_FREQUENCIES[4] = {4096, 262144, 65536, 16384};
-
