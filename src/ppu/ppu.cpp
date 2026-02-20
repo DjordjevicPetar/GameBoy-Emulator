@@ -25,6 +25,7 @@ PPU::PPU(InterruptController* interrupt_controller) :
 
     mode = OAM;
     cycle_counter = 0;
+    oam_scanned = false;
 
     palette[0] = PPU_WHITE;
     palette[1] = PPU_LIGHT_GRAY;
@@ -33,6 +34,12 @@ PPU::PPU(InterruptController* interrupt_controller) :
 
     window_line_counter = 0;
     window_was_rendered = false;
+
+    line_sprites = std::vector<Sprite>(10);
+    line_sprite_count = 0;
+    line_sprite_size = false;
+
+    stat_irq_line = false;
 }
 
 void PPU::reset() {
@@ -58,9 +65,7 @@ void PPU::update_stat_register() {
 
 void PPU::check_lyc_interrupt() {
     update_stat_register();
-    if (lyc == ly && (stat & STAT_LYC_INTERRUPT_ENABLE_MASK)) {
-        interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
-    }
+    update_stat_irq();
 }
 
 void PPU::clear_framebuffer() {
@@ -134,6 +139,8 @@ void PPU::write(u16 addr, u8 val) {
         }
         case PPU_REGISTER_STAT: {
             stat = (stat & STAT_READ_ONLY_MASK) | (val & STAT_READ_WRITE_MASK);
+            update_stat_register();
+            update_stat_irq();
             return;
         }
         case PPU_REGISTER_SCY: {
@@ -150,10 +157,8 @@ void PPU::write(u16 addr, u8 val) {
         }
         case PPU_REGISTER_LYC: {
             lyc = val;
-            if (lyc == ly && (stat & STAT_LYC_INTERRUPT_ENABLE_MASK)) {
-                interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
-            }
             update_stat_register();
+            update_stat_irq();
             return;
         }
         case PPU_REGISTER_BGP: {
@@ -189,31 +194,46 @@ void PPU::step(u8 cycles) {
 
     // TODO(cycle-accuracy): Mode 3 (DRAW) duration is hardcoded at 172 T-cycles, but on
     // real hardware it varies from 172 to ~289 T-cycles depending on:
-    //  - Number of sprites on the current scanline (each sprite adds ~6-11 cycles)
-    //  - SCX % 8 (initial tile alignment adds 0-7 cycles of penalty)
-    //  - Window trigger mid-scanline (restarts the pixel FIFO)
+    //      [Done] - Number of sprites on the current scanline (each sprite adds ~6-11 cycles) 
+    //      [Done] - SCX % 8 (initial tile alignment adds 0-7 cycles of penalty) 
+    //  TODO - Window trigger mid-scanline (restarts the pixel FIFO)
+    //
     // HBlank duration adjusts to keep total line at 456 T-cycles.
     // This affects HBlank timing which games use for mid-frame VRAM updates.
 
-    // TODO(cycle-accuracy): STAT interrupt should use an "IRQ line" model. On real HW,
-    // the LCD STAT interrupt is edge-triggered: it only fires when the combined STAT
-    // condition (mode match OR LYC==LY) transitions from LOW to HIGH. The current
-    // implementation fires on every mode change unconditionally, which can produce
-    // duplicate STAT interrupts and break games that rely on exact interrupt timing
-    // (e.g.,Ings/GBVideoPlayer, Road Rash). Fix: track a `stat_irq_line` bool,
-    // compute new line state each step, and only request interrupt on rising edge.
+    if (dma_active) {
+        int m_cycles = cycles / 4;
+        for (int i = 0; i < m_cycles && dma_counter < 160; i++) {
+            oam[dma_counter] = mmu->read_memory_8(dma_source + dma_counter);
+            dma_counter++;
+        }
+
+        if (dma_counter >= 160) {
+            dma_active = false;
+        }
+    }
 
     if (mode == OAM) {
+        if (!oam_scanned) {
+            oam_scanned = true;
+
+            draw_cycles_needed = PPU_DRAW_CYCLES;
+            draw_cycles_needed += scx % 8;
+            draw_cycles_needed += line_sprite_count * 6;
+        }
+
         if (cycle_counter >= PPU_OAM_CYCLES) {
+            oam_scan();
             mode = DRAW;
             update_stat_register();
+            update_stat_irq();
         }
     }
     else if (mode == DRAW) {
-        if (cycle_counter >= PPU_OAM_CYCLES + PPU_DRAW_CYCLES) {
+        if (cycle_counter >= PPU_OAM_CYCLES + draw_cycles_needed) {
             mode = HBlank;
             update_stat_register();
-            if (stat & STAT_HBLANK_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+            update_stat_irq();
             render_scanline();
         }
     }
@@ -222,17 +242,18 @@ void PPU::step(u8 cycles) {
             cycle_counter -= PPU_FULL_LINE_CYCLES;
             ly++;
             check_lyc_interrupt();
+            oam_scanned = false;
 
             if (ly == PPU_VBLANK_FIRST_LINE) {
                 mode = VBlank;
                 update_stat_register();
                 interrupt_controller->request_interrupt(INTERRUPT_VBLANK_BIT);
-                if (stat & STAT_VBLANK_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+                update_stat_irq();
             }
             else {
                 mode = OAM;
                 update_stat_register();
-                if (stat & STAT_OAM_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+                update_stat_irq();
             }
         }
     }
@@ -241,6 +262,7 @@ void PPU::step(u8 cycles) {
             cycle_counter -= PPU_FULL_LINE_CYCLES;
             ly++;
             check_lyc_interrupt();
+            oam_scanned = false;
 
             if (ly > PPU_VBLANK_LAST_LINE) {
                 ly = 0;
@@ -249,10 +271,38 @@ void PPU::step(u8 cycles) {
                 check_lyc_interrupt();
                 mode = OAM;
                 update_stat_register();
-                if (stat & STAT_OAM_INTERRUPT_ENABLE_MASK) interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
+                update_stat_irq();
             }
         }
     }
+}
+
+void PPU::oam_scan() {
+    line_sprite_count = 0;
+
+    line_sprite_size = lcdc & LCDC_OBJ_SIZE_MASK;
+
+    for (int i = 0; i < 40; i++) {
+        u8 y = oam[i * 4 + 0];
+        u8 x = oam[i * 4 + 1];
+        u8 tile = oam[i * 4 + 2];
+        u8 flags = oam[i * 4 + 3];
+
+        int sprite_y = y - 16;
+
+        if (ly < sprite_y || ly >= sprite_y + (line_sprite_size ? 16 : 8)) continue;
+
+        if (line_sprite_count < 10) {
+            line_sprites[line_sprite_count++] = {y, x, tile, flags, (u8)i};
+        }
+    }
+
+    if (line_sprite_count == 0) return;
+
+    std::sort(line_sprites.begin(), line_sprites.begin() + line_sprite_count, [](const Sprite& a, const Sprite& b) {
+        if (a.x != b.x) return a.x > b.x;
+        return a.oam_index > b.oam_index;
+    });
 }
 
 void PPU::render_scanline() {
@@ -376,51 +426,11 @@ void PPU::render_window() {
 void PPU::render_sprites() {
     if (!(lcdc & LCDC_OBJ_ENABLE_MASK)) return;
 
-    // TODO(cycle-accuracy): Sprite evaluation (OAM scan) should happen during mode 2
-    // (OAM search, 80 T-cycles), not during rendering. The OAM scan checks 2 sprites
-    // per M-cycle (40 sprites in 80 cycles). The 10-sprite-per-line limit and the
-    // order they're found in affects mode 3 timing and priority. Currently we scan
-    // OAM during render_scanline() which is called at the end of mode 3.
-
-    bool sprite_size = lcdc & LCDC_OBJ_SIZE_MASK;
-
-    struct Sprite {
-        u8 y, x;
-        u8 tile;
-        u8 flags;
-        u8 oam_index;
-    };
-
-    std::vector<Sprite> sprites(10);
-    int count = 0;
-
-    for (int i = 0; i < 40; i++) {
-        u8 y = oam[i * 4 + 0];
-        u8 x = oam[i * 4 + 1];
-        u8 tile = oam[i * 4 + 2];
-        u8 flags = oam[i * 4 + 3];
-
-        int sprite_y = y - 16;
-
-        if (ly < sprite_y || ly >= sprite_y + (sprite_size ? 16 : 8)) continue;
-
-        if (count < 10) {
-            sprites[count++] = {y, x, tile, flags, (u8)i};
-        }
-    }
-
-    if (count == 0) return;
-
-    std::sort(sprites.begin(), sprites.begin() + count, [](const Sprite& a, const Sprite& b) {
-        if (a.x != b.x) return a.x > b.x;
-        return a.oam_index > b.oam_index;
-    });
-
-    for (int i = 0; i < count; i++) {
-        u8 y = sprites[i].y;
-        u8 x = sprites[i].x;
-        u8 tile = sprites[i].tile;
-        u8 flags = sprites[i].flags;
+    for (int i = 0; i < line_sprite_count; i++) {
+        u8 y = line_sprites[i].y;
+        u8 x = line_sprites[i].x;
+        u8 tile = line_sprites[i].tile;
+        u8 flags = line_sprites[i].flags;
 
         int sprite_y = y - 16;
         int sprite_x = x - 8;
@@ -432,10 +442,10 @@ void PPU::render_sprites() {
 
         int local_y = ly - sprite_y;
         if (flip_y) {
-            local_y = (sprite_size ? 15 : 7) - local_y;
+            local_y = (line_sprite_size ? 15 : 7) - local_y;
         }
 
-        if (sprite_size) {
+        if (line_sprite_size) {
             tile &= 0xFE; // bit0 not used
         }
 
@@ -479,20 +489,36 @@ u8 PPU::get_ly() {
 }
 
 void PPU::write_dma(u8 val) {
-    // TODO(cycle-accuracy): OAM DMA takes 160 M-cycles (640 T-cycles) and should
-    // transfer one byte per M-cycle. During DMA, the CPU can ONLY access HRAM
-    // (0xFF80-0xFFFE) - all other reads return 0xFF. Currently the entire 160-byte
-    // transfer happens instantly in zero cycles. This breaks games that rely on
-    // the DMA timing (most games use a small HRAM routine to wait for DMA completion).
-    // Fix: set dma_active=true, track dma_counter, transfer 1 byte per M-cycle in
-    // step(), and have MMU return 0xFF for non-HRAM reads while dma_active.
+    // TODO(cycle-accuracy): During DMA, the CPU can ONLY access HRAM (tried, but
+    // this breaks everything)
     dma_source = val * 0x100;
     dma_counter = 0;
     dma_active = true;
+}
 
-    for (int i = 0; i < 160; ++i) {
-        oam[i] = mmu->read_memory_8(dma_source + i);
+bool PPU::is_dma_active() {
+    return dma_active;
+}
+
+void PPU::update_stat_irq() {
+    bool new_stat_irq_line = false;
+
+    if (stat & STAT_OAM_INTERRUPT_ENABLE_MASK && mode == OAM) {
+        new_stat_irq_line = true;
+    }
+    if (stat & STAT_HBLANK_INTERRUPT_ENABLE_MASK && mode == HBlank) {
+        new_stat_irq_line = true;
+    }
+    if (stat & STAT_VBLANK_INTERRUPT_ENABLE_MASK && mode == VBlank) {
+        new_stat_irq_line = true;
+    }
+    if ((lyc == ly) && (stat & STAT_LYC_INTERRUPT_ENABLE_MASK)) {
+        new_stat_irq_line = true;
+    }
+    
+    if (!stat_irq_line && new_stat_irq_line) {
+        interrupt_controller->request_interrupt(INTERRUPT_LCD_STAT_BIT);
     }
 
-    dma_active = false;
+    stat_irq_line = new_stat_irq_line;
 }

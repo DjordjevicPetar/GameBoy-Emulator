@@ -89,6 +89,13 @@ class MMU;
 
 class PPU {
 public:
+    struct Sprite {
+        u8 y, x;
+        u8 tile;
+        u8 flags;
+        u8 oam_index;
+    };
+
     PPU(InterruptController* interrupt_controller);
     void reset();
     void step(u8 cycles);
@@ -102,6 +109,7 @@ public:
     u8 get_ly();
 
     void write_dma(u8 value);
+    bool is_dma_active();
 
     void set_mmu(MMU* mmu_inst) {
         mmu = mmu_inst;
@@ -121,6 +129,8 @@ private:
 
     PPUMode mode;
     int cycle_counter;
+    
+    bool oam_scanned;
 
     void render_scanline();
 
@@ -132,6 +142,10 @@ private:
     void check_lyc_interrupt();
 
     void clear_framebuffer();
+
+    void oam_scan();
+
+    void update_stat_irq();
 
     u8 lcdc;
     u8 stat;
@@ -152,11 +166,12 @@ private:
     u16 dma_source = 0;
     u8 dma_counter = 0;
 
-    // TODO: Add `bool stat_irq_line = false;` to implement edge-triggered STAT
-    // interrupt. Compute the combined condition each step:
-    //   new_line = (mode==HBlank && hblank_int_en) || (mode==VBlank && vblank_int_en)
-    //           || (mode==OAM && oam_int_en) || (ly==lyc && lyc_int_en);
-    // Only request INTERRUPT_LCD_STAT_BIT when !stat_irq_line && new_line (rising edge).
-    // Then set stat_irq_line = new_line.
+    std::vector<Sprite> line_sprites;
+    int line_sprite_count;
+    bool line_sprite_size;
+
+    int draw_cycles_needed;
+
+    bool stat_irq_line;
 };
 
