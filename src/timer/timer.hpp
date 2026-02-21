@@ -15,28 +15,28 @@ enum TIMER_REGISTER_ADDRESSES {
     TIMER_REGISTER_TAC = 0xFF07,
 };
 
+constexpr u8 TAC_BIT_LOOKUP[4] = {9, 3, 5, 7};
+
 class Timer {
 public:
     explicit Timer(InterruptController* interrupt_controller);
     
-    void update_timer(u32 cycles);
     void write_timer(u16 address, u8 value);
     u8 read_timer(u16 address) const;
 
-private:
-    bool has_enough_cycles_passed_tima() const;
-    bool has_enough_cycles_passed_div() const;
-    void update_tima();
-    void update_div();
+    void process_cycle();
 
+private:
     InterruptController* interrupt_controller_;
+
+    u16 sys_counter_ = 0;
     
-    u8 div_register_ = 0;
     u8 tima_register_ = 0;
     u8 tma_register_ = 0;
     u8 tac_register_ = 0;
 
-    u32 cycles_since_last_update_tima_ = 0;
-    u32 cycles_since_last_update_div_ = 0;
+    bool overflow_delay = false;
+
+    void update_tima(u16 new_counter, u16 old_counter);
 };
 

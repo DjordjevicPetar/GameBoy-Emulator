@@ -2,8 +2,6 @@
 #include "memory/cartridge.hpp"
 #include <iostream>
 
-GameBoyEmulator* GameBoyEmulator::instance_ = nullptr;
-
 std::string GameBoyEmulator::filepath_ = "";
 
 GameBoyEmulator::GameBoyEmulator() 
@@ -18,10 +16,8 @@ GameBoyEmulator::GameBoyEmulator()
      {}
 
 GameBoyEmulator* GameBoyEmulator::getInstance() {
-    if (instance_ == nullptr) {
-        instance_ = new GameBoyEmulator();
-    }
-    return instance_;
+    static GameBoyEmulator instance;
+    return &instance;
 }
 
 void GameBoyEmulator::setFilepath(const std::string& filepath) {
@@ -82,8 +78,9 @@ void GameBoyEmulator::run_until_next_frame() {
         cycles += cpu_.handle_interrupts();
         cycles_executed_ += cycles;
         
-        // Handle timer
-        timer_.update_timer(cycles);
+        for (int i = 0; i < cycles; i += 4) {
+            timer_.process_cycle();
+        }
 
         // Handle Graphics
         PPUMode prev_mode = ppu_.get_mode();
