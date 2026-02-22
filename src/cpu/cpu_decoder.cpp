@@ -1,13 +1,9 @@
-#include "instruction_decoder.hpp"
 #include "cpu.hpp"
+#include "../memory/mmu.hpp"
+#include <iostream>
 
-void InstructionDecoder::initializeHandlers(CPU* cpu) {
-    registerInstructions(cpu);
-    registerCbInstructions(cpu);
-}
-
-void InstructionDecoder::registerInstructions(CPU* cpu) {
-    auto& h = cpu->op_handlers_;
+void CPU::registerInstructions() {
+    auto& h = op_handlers_;
 
     // Broadest patterns first (fewer fixed bits), narrower ones overwrite.
     // mask 0xC0 = 2 fixed bits -> 64 opcodes each
@@ -17,6 +13,7 @@ void InstructionDecoder::registerInstructions(CPU* cpu) {
     add_instruction(h, 0xC7, 0x04, &CPU::op_inc_r);
     add_instruction(h, 0xC7, 0x05, &CPU::op_dec_r);
     add_instruction(h, 0xC7, 0x06, &CPU::op_ld_r_imm);
+    add_instruction(h, 0xC7, 0x46, &CPU::op_ld_r_hl_ind);
     add_instruction(h, 0xC7, 0xC7, &CPU::op_rst_imm);
 
     // mask 0xCF = 6 fixed bits -> 4 opcodes each
@@ -62,11 +59,21 @@ void InstructionDecoder::registerInstructions(CPU* cpu) {
     add_instruction(h, 0xFF, 0x2A, &CPU::op_ld_a_hl_ind_inc);
     add_instruction(h, 0xFF, 0x2F, &CPU::op_cpl);
     add_instruction(h, 0xFF, 0x32, &CPU::op_ld_hl_ind_dec_a);
+    add_instruction(h, 0xFF, 0x34, &CPU::op_inc_hl_ind);
+    add_instruction(h, 0xFF, 0x35, &CPU::op_dec_hl_ind);
     add_instruction(h, 0xFF, 0x36, &CPU::op_ld_hl_ind_imm);
     add_instruction(h, 0xFF, 0x37, &CPU::op_scf);
     add_instruction(h, 0xFF, 0x3A, &CPU::op_ld_a_hl_ind_dec);
     add_instruction(h, 0xFF, 0x3F, &CPU::op_ccf);
     add_instruction(h, 0xFF, 0x76, &CPU::op_halt);
+    add_instruction(h, 0xFF, 0x86, &CPU::op_add_hl_ind);
+    add_instruction(h, 0xFF, 0x8E, &CPU::op_adc_hl_ind);
+    add_instruction(h, 0xFF, 0x96, &CPU::op_sub_hl_ind);
+    add_instruction(h, 0xFF, 0x9E, &CPU::op_sbc_hl_ind);
+    add_instruction(h, 0xFF, 0xA6, &CPU::op_and_hl_ind);
+    add_instruction(h, 0xFF, 0xAE, &CPU::op_xor_hl_ind);
+    add_instruction(h, 0xFF, 0xB6, &CPU::op_or_hl_ind);
+    add_instruction(h, 0xFF, 0xBE, &CPU::op_cp_hl_ind);
     add_instruction(h, 0xFF, 0xC3, &CPU::op_jp_imm);
     add_instruction(h, 0xFF, 0xC6, &CPU::op_add_imm);
     add_instruction(h, 0xFF, 0xC9, &CPU::op_ret);
@@ -94,8 +101,8 @@ void InstructionDecoder::registerInstructions(CPU* cpu) {
     add_instruction(h, 0xFF, 0xFE, &CPU::op_cp_imm);
 }
 
-void InstructionDecoder::registerCbInstructions(CPU* cpu) {
-    auto& h = cpu->cb_handlers_;
+void CPU::registerCbInstructions() {
+    auto& h = cb_handlers_;
 
     // Broadest first (mask 0xC0 -> 64 opcodes each)
     add_instruction(h, 0xC0, 0x40, &CPU::op_bit_b_r);
@@ -128,7 +135,7 @@ void InstructionDecoder::registerCbInstructions(CPU* cpu) {
     add_instruction(h, 0xFF, 0x3E, &CPU::op_srl_hl_ind);
 }
 
-void InstructionDecoder::add_instruction(std::array<Handler, 256>& handlers, u8 mask, u8 pattern, Handler instruction) {
+void CPU::add_instruction(std::array<Handler, 256>& handlers, u8 mask, u8 pattern, Handler instruction) {
     int index = find_first_zero(mask);
 
     if (index == 8) {
@@ -140,11 +147,18 @@ void InstructionDecoder::add_instruction(std::array<Handler, 256>& handlers, u8 
     add_instruction(handlers, mask | (1 << index), pattern | (1 << index), instruction);
 }
 
-u8 InstructionDecoder::find_first_zero(u8 value) {
-    for (int i = 0; i < 8; i++) {
-        if (!test_bit(value, i)) {
-            return i;
-        }
+void CPU::fetch_next_instruction(std::array<Handler, 256>& handler_array) {
+    read_memory_8(pc_);
+    current_opcode_ = memory_temp_;
+    if (halt_bug_triggered_) {
+        halt_bug_triggered_ = false;
+    } else {
+        pc_++;
     }
-    return 8;
+    current_instruction_handler_ = handler_array[current_opcode_];
+
+    if (current_instruction_handler_ == nullptr) {
+        std::cout << "Undefined opcode: " << std::hex << static_cast<int>(current_opcode_) << std::endl;
+        throw std::runtime_error("Undefined opcode");
+    }
 }

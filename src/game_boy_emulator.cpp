@@ -57,36 +57,21 @@ void GameBoyEmulator::check_events() { // returns true if 'QUIT'
 }
 
 void GameBoyEmulator::run_until_next_frame() {
-    // TODO(cycle-accuracy): This loop steps the CPU one full instruction at a time,
-    // then feeds ALL cycles to timer/PPU/APU at once. On real hardware, the CPU, PPU,
-    // and timer all advance in lockstep every T-cycle (or at minimum every M-cycle = 4 T).
-    // This means mid-instruction memory accesses (e.g., 16-bit writes during PUSH/CALL,
-    // multi-byte reads during fetch_u16) should interleave with PPU/timer updates.
-    // To pass blargg's mem_timing, mem_timing-2, and instr_timing tests, we need to
-    // step components per M-cycle (4 T-cycles) instead of per instruction.
-    // Approach: CPU returns cycles consumed per M-cycle step, and after each M-cycle
-    // we tick timer, PPU, and APU by 4 T-cycles.
     bool next_frame_detected = false;
-    int instruction_count = 0;
+    int cycle_count = 0;
 
     while (!next_frame_detected && !stop_cpu_) {
-        u8 cycles = cpu_.execute_next_instruction();
-        // TODO(cycle-accuracy): Interrupt dispatch should happen BETWEEN instructions,
-        // not be added to the previous instruction's cycles. The 20-cycle interrupt
-        // dispatch (5 M-cycles: 2 wait + 2 push + 1 jump) should also tick PPU/timer
-        // on each M-cycle, not all at once after the fact.
-        cycles += cpu_.handle_interrupts();
-        cycles_executed_ += cycles;
-        
-        for (int i = 0; i < cycles; i += 4) {
+        if (!cpu_.isStopped()) {
+            cpu_.process_cycle();
             timer_.process_cycle();
         }
 
-        // Handle Graphics
         PPUMode prev_mode = ppu_.get_mode();
         u8 prev_ly = ppu_.get_ly();
 
-        ppu_.step(cycles);
+        if (!cpu_.isStopped()) {
+            ppu_.step(4);
+        }
 
         if (ppu_.get_ly() == 0 && ppu_.get_mode() == PPUMode::OAM) {
             if (prev_ly != 0 || prev_mode != PPUMode::OAM) {
@@ -94,15 +79,15 @@ void GameBoyEmulator::run_until_next_frame() {
             }
         }
 
-        instruction_count++;
-        if (instruction_count > 100) {
+        cycle_count++;
+        if (cycle_count > 100) {
             check_events();
             if (stop_cpu_) return;
+            cycle_count = 0;
         }
-        
-        // Handle Audio
-        apu_.step(cycles);
-        cycles_from_audio_sample += cycles;
+
+        apu_.step(4);
+        cycles_from_audio_sample += 4;
 
         while (cycles_from_audio_sample >= 87) {
             cycles_from_audio_sample -= 87;
