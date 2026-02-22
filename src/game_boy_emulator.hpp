@@ -42,7 +42,6 @@ private:
 
     // State
     bool stop_cpu_ = false;
-    u32 cycles_executed_ = 0;
     static std::string filepath_;
 
     // Audio
