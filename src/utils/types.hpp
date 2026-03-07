@@ -84,3 +84,17 @@ static_assert(sizeof(s64) == 8, "s64 must be 8 bytes");
 [[nodiscard]] constexpr s16 sign_extend8(u8 value) {
     return static_cast<s16>(static_cast<s8>(value));
 }
+
+// ============================================================================
+// Bit Manipulation Helpers
+// ============================================================================
+
+// Find first zero bit
+[[nodiscard]] constexpr u8 find_first_zero(u8 value) {
+    for (int i = 0; i < 8; i++) {
+        if (!test_bit(value, i)) {
+            return i;
+        }
+    }
+    return 8;
+}

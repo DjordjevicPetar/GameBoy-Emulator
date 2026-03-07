@@ -2,10 +2,7 @@
 
 #include "../utils/types.hpp"
 
-
 #include "../utils/constants.hpp"
-#include "instruction_decoder.hpp"
-#include <string>
 #include <array>
 
 // Forward declarations
@@ -13,34 +10,51 @@ class MMU;
 class InterruptController;
 
 class CPU {
-    friend class InstructionDecoder;
+    using Handler = void (CPU::*)();
 
 public:
     CPU(MMU* mmu, InterruptController* interrupt_controller);
     
-    u8 execute_next_instruction();
-    u8 handle_interrupts();
+    void process_cycle();
     
     bool getIME() const { return ime_; }
     void setIME(bool value) { ime_ = value; }
+    bool isStopped() const { return stopped_; }
+    void wake() { stopped_ = false; }
 
 private:
+
+    enum class State_Machine {
+        FETCH_NEXT_INSTRUCTION,
+        INITIAL_PHASE,
+        ASSIGN_VALUE_TO_REGISTER,
+        ASSIGN_VALUE_TO_REGISTER_LOW_BYTE,
+        ASSIGN_VALUE_TO_REGISTER_HIGH_BYTE,
+        WRITE_VALUE_TO_MEMORY,
+        WRITE_VALUE_TO_MEMORY_LOW_BYTE,
+        WRITE_VALUE_TO_MEMORY_HIGH_BYTE,
+        READ_MEMORY,
+        READ_MEMORY_LOW_BYTE,
+        READ_MEMORY_HIGH_BYTE,
+        DECREMENT_SP,
+        PROCESS_INTERRUPTS,
+        NO_OP,
+    };
     // Dependencies
     MMU* mmu_;
     InterruptController* interrupt_controller_;
     
     // State
-    u8 current_opcode_ = 0;
     bool ime_ = false;           // Interrupt Master Enable
     bool ei_pending_ = false;    // EI delay (IME enabled after next instruction)
     bool halted_ = false;        // CPU halted, waiting for interrupt
     bool halt_bug_triggered_ = false;  // HALT bug: next instruction read doesn't increment PC
+    bool stopped_ = false;            // CPU stopped, waiting for button press
+    u16 memory_temp_ = 0;
+    State_Machine state_machine_ = State_Machine::FETCH_NEXT_INSTRUCTION;
 
-    // Cycle helpers - register 6 is (HL) which requires memory access
-    static constexpr u8 HL_IND = 6;
-    static constexpr u8 cycles_for_reg(u8 reg, u8 base, u8 hl_extra) {
-        return (reg == HL_IND) ? (base + hl_extra) : base;
-    }
+    // Interrupt handling
+    bool process_interrupts_ = false;
 
     // Registers
     u16 af_ = 0;
@@ -83,11 +97,6 @@ private:
     void setFlagC(bool value) { af_ = (af_ & 0xFFEF) | (value ? 0x10 : 0x00); }
 
     // Opcode parameter decoding
-    u8 read_first_register_8_bit_parameter() const;
-    u8 read_second_register_8_bit_parameter() const;
-    u8 read_first_register_16_bit_parameter() const;
-    u8 read_second_register_16_bit_parameter() const;
-    u8 read_bit_argument() const;
     u8 read_condition_argument() const;
 
     // Register read/write by number
@@ -97,128 +106,142 @@ private:
     void write_register_16_bit(u8 reg_num, u16 value);
     u16 read_register_16_bit_stack(u8 reg_num) const;
     void write_register_16_bit_stack(u8 reg_num, u16 value);
-    u16 read_register_16_bit_memory(u8 reg_num);
-    void write_register_16_bit_memory(u8 reg_num, u16 value);
-
     // Utility
-    u8 fetchOpcode();
-    u16 fetch_u16();  // Fetch 16-bit value (low byte first, then high byte)
-    static u16 make_u16(u8 low, u8 high) { return (static_cast<u16>(high) << 8) | low; }
-    void log(const std::string& func_name, const std::string& details = "");
+    void log_state();
+    void read_memory_8(u16 address, bool high_byte = false);
+    void write_memory_8(u16 address, u8 value);
     
-    // Stack operations
-    void push_to_stack(u16 value);
-    u16 pop_from_stack();
-    
+    // Interrupt handling (called at instruction boundaries inside process_cycle)
+    void process_interrupts();
+    void detect_interrupts();
+
     // CB prefix handler
-    u8 cb_ins_handler();
+    void cb_ins_handler();
+
+    // CPU_Decoder functions
+    void registerInstructions();
+    void registerCbInstructions();
+    void add_instruction(std::array<Handler, 256>& handlers, u8 mask, u8 pattern, Handler instruction);
+    void fetch_next_instruction(std::array<Handler, 256>& handlers);
+    Handler current_instruction_handler_;
+    u8 current_opcode_ = 0;
     
     // 8-bit load instructions
-    u8 op_ld_r_r();       // handles LD r,r' including LD r,(HL)
-    u8 op_ld_r_imm();
-    u8 op_ld_hl_ind_r();
-    u8 op_ld_hl_ind_imm();
-    u8 op_ld_a_bc_ind();
-    u8 op_ld_a_de_ind();
-    u8 op_ld_bc_ind_a();
-    u8 op_ld_de_ind_a();
-    u8 op_ld_a_imm_ind();
-    u8 op_ld_imm_ind_a();
-    u8 op_ldh_a_c_ind();
-    u8 op_ldh_c_ind_a();
-    u8 op_ldh_a_imm_ind();
-    u8 op_ldh_imm_ind_a();
-    u8 op_ld_a_hl_ind_dec();
-    u8 op_ld_hl_ind_dec_a();
-    u8 op_ld_a_hl_ind_inc();
-    u8 op_ld_hl_ind_inc_a();
+    void op_ld_r_r();
+    void op_ld_r_imm();
+    void op_ld_r_hl_ind();
+    void op_ld_hl_ind_r();
+    void op_ld_hl_ind_imm();
+    void op_ld_a_bc_ind();
+    void op_ld_a_de_ind();
+    void op_ld_bc_ind_a();
+    void op_ld_de_ind_a();
+    void op_ld_a_imm_ind();
+    void op_ld_imm_ind_a();
+    void op_ldh_a_c_ind();
+    void op_ldh_c_ind_a();
+    void op_ldh_a_imm_ind();
+    void op_ldh_imm_ind_a();
+    void op_ld_a_hl_ind_dec();
+    void op_ld_hl_ind_dec_a();
+    void op_ld_a_hl_ind_inc();
+    void op_ld_hl_ind_inc_a();
     
     // 16-bit load instructions
-    u8 op_ld_rr_imm();
-    u8 op_ld_imm_ind_sp();
-    u8 op_ld_sp_hl();
-    u8 op_push_rr();
-    u8 op_pop_rr();
-    u8 op_ld_hl_sp_e();
+    void op_ld_rr_imm();
+    void op_ld_imm_ind_sp();
+    void op_ld_sp_hl();
+    void op_push_rr();
+    void op_pop_rr();
+    void op_ld_hl_sp_e();
     
-    // 8-bit arithmetic/logic - _r handlers include (HL) with proper cycle count
-    u8 op_add_r();
-    u8 op_add_imm();
-    u8 op_adc_r();
-    u8 op_adc_imm();
-    u8 op_sub_r();
-    u8 op_sub_imm();
-    u8 op_sbc_r();
-    u8 op_sbc_imm();
-    u8 op_cp_r();
-    u8 op_cp_imm();
-    u8 op_inc_r();
-    u8 op_dec_r();
-    u8 op_and_r();
-    u8 op_and_imm();
-    u8 op_or_r();
-    u8 op_or_imm();
-    u8 op_xor_r();
-    u8 op_xor_imm();
-    u8 op_ccf();
-    u8 op_scf();
-    u8 op_daa();
-    u8 op_cpl();
+    // 8-bit arithmetic/logic
+    void op_add_r();
+    void op_add_hl_ind();
+    void op_add_imm();
+    void op_adc_r();
+    void op_adc_hl_ind();
+    void op_adc_imm();
+    void op_sub_r();
+    void op_sub_hl_ind();
+    void op_sub_imm();
+    void op_sbc_r();
+    void op_sbc_hl_ind();
+    void op_sbc_imm();
+    void op_cp_r();
+    void op_cp_hl_ind();
+    void op_cp_imm();
+    void op_inc_r();
+    void op_inc_hl_ind();
+    void op_dec_r();
+    void op_dec_hl_ind();
+    void op_and_r();
+    void op_and_hl_ind();
+    void op_and_imm();
+    void op_or_r();
+    void op_or_hl_ind();
+    void op_or_imm();
+    void op_xor_r();
+    void op_xor_hl_ind();
+    void op_xor_imm();
+    void op_ccf();
+    void op_scf();
+    void op_daa();
+    void op_cpl();
     
     // 16-bit arithmetic
-    u8 op_inc_rr();
-    u8 op_dec_rr();
-    u8 op_add_hl_rr();
-    u8 op_add_sp_e();
+    void op_inc_rr();
+    void op_dec_rr();
+    void op_add_hl_rr();
+    void op_add_sp_e();
     
     // Rotate/shift (non-CB)
-    u8 op_rlca();
-    u8 op_rrca();
-    u8 op_rla();
-    u8 op_rra();
+    void op_rlca();
+    void op_rrca();
+    void op_rla();
+    void op_rra();
 
     // CB prefix instructions
-    u8 op_rlc_r();
-    u8 op_rlc_hl_ind();
-    u8 op_rrc_r();
-    u8 op_rrc_hl_ind();
-    u8 op_rl_r();
-    u8 op_rl_hl_ind();
-    u8 op_rr_r();
-    u8 op_rr_hl_ind();
-    u8 op_sla_r();
-    u8 op_sla_hl_ind();
-    u8 op_sra_r();
-    u8 op_sra_hl_ind();
-    u8 op_swap_r();
-    u8 op_swap_hl_ind();
-    u8 op_srl_r();
-    u8 op_srl_hl_ind();
-    u8 op_bit_b_r();
-    u8 op_bit_b_hl_ind();
-    u8 op_res_b_r();
-    u8 op_res_b_hl_ind();
-    u8 op_set_b_r();
-    u8 op_set_b_hl_ind();
+    void op_rlc_r();
+    void op_rlc_hl_ind();
+    void op_rrc_r();
+    void op_rrc_hl_ind();
+    void op_rl_r();
+    void op_rl_hl_ind();
+    void op_rr_r();
+    void op_rr_hl_ind();
+    void op_sla_r();
+    void op_sla_hl_ind();
+    void op_sra_r();
+    void op_sra_hl_ind();
+    void op_swap_r();
+    void op_swap_hl_ind();
+    void op_srl_r();
+    void op_srl_hl_ind();
+    void op_bit_b_r();
+    void op_bit_b_hl_ind();
+    void op_res_b_r();
+    void op_res_b_hl_ind();
+    void op_set_b_r();
+    void op_set_b_hl_ind();
     
     // Control flow
-    u8 op_jp_imm();
-    u8 op_jp_hl();
-    u8 op_jp_cc_imm();
-    u8 op_jr_e();
-    u8 op_jr_cc_e();
-    u8 op_call_imm();
-    u8 op_call_cc_imm();
-    u8 op_ret();
-    u8 op_ret_cc();
-    u8 op_reti();
-    u8 op_rst_imm();
+    void op_jp_imm();
+    void op_jp_hl();
+    void op_jp_cc_imm();
+    void op_jr_e();
+    void op_jr_cc_e();
+    void op_call_imm();
+    void op_call_cc_imm();
+    void op_ret();
+    void op_ret_cc();
+    void op_reti();
+    void op_rst_imm();
     
     // Miscellaneous
-    u8 op_halt();
-    u8 op_stop();
-    u8 op_di();
-    u8 op_ei();
-    u8 op_nop();
+    void op_halt();
+    void op_stop();
+    void op_di();
+    void op_ei();
+    void op_nop();
 };
-

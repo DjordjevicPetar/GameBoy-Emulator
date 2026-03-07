@@ -20,7 +20,10 @@ void Joypad::update_button_state(Button b, bool pressed) {
     bool prev = button_state[b];
     button_state[b] = pressed;
 
-    // Joypad interrupt is requested only on button press
+    // TODO: When a button is pressed while CPU is in STOP mode, wake the CPU
+    // by clearing its stopped_ flag (e.g. via cpu_->wake() or similar).
+    // Joypad needs a CPU* dependency or a callback to do this.
+
     if (!prev && pressed) {
         interrupt_controller->request_interrupt(INTERRUPT_JOYPAD_BIT);
     }

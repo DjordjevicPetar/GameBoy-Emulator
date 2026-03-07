@@ -22,12 +22,9 @@ public:
     GameBoyEmulator& operator=(GameBoyEmulator&&) = delete;
     
     void emulate();
-    void run_until_next_frame();  // Public for headless mode
 
     static void setFilepath(const std::string& filepath);
     
-    // TODO: Singleton with raw `new` leaks memory (instance_ is never deleted).
-    // Either use a static local variable or std::unique_ptr for the instance.
     static GameBoyEmulator* getInstance();
 
 private:
@@ -41,16 +38,14 @@ private:
     CPU cpu_;
     
     void check_events();
+    void run_until_next_frame();
 
     // State
     bool stop_cpu_ = false;
-    u32 cycles_executed_ = 0;
     static std::string filepath_;
 
     // Audio
     u32 cycles_from_audio_sample = 0;
     std::vector<s16> audio_buffer;
-    
-    static GameBoyEmulator* instance_;
 };
 
