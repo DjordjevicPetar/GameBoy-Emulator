@@ -84,13 +84,7 @@ void MBC1::write(u16 addr, u8 val) {
         ram_enabled = (val & MBC1_RAM_ENABLE_MASK) == MBC1_RAM_ENABLE_ENABLED;
     }
     else if (addr <= ROM_BANK_SELECT_END) {
-        // TODO: The 0->1 fixup should NOT be done here at write time. It should be
-        // done at read time when computing the effective bank number. Writing 0x00
-        // to this register stores 0x00; the bank calculation then treats 0 as 1.
-        // Doing it here means reading the register back returns 1 instead of 0,
-        // and it can interact incorrectly with the high bits for large ROMs.
         current_rom_bank_low = val & MBC1_ROM_BANKS_MASK;
-        if (current_rom_bank_low == 0) current_rom_bank_low = 1;
     }
     else if (addr <= RAM_BANK_SELECT_END) {
         current_rom_bank_high = val & MBC1_RAM_BANKS_MASK;

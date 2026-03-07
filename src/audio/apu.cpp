@@ -81,6 +81,26 @@ void APU::step(u8 cycles) {
     ch4.step(cycles);
 }
 
+u8 APU::read_nr50() {
+    return nr50;
+}
+
+u8 APU::read_nr51() {
+    return nr51;
+}
+
+u8 APU::read_nr52() {
+    u8 res = (nr52 & 0x80);
+    res |= 0x70;
+
+    if (ch1.is_enabled()) res |= 0x01;
+    if (ch2.is_enabled()) res |= 0x02;
+    if (ch3.is_enabled()) res |= 0x04;
+    if (ch4.is_enabled()) res |= 0x08;
+
+    return res;
+}
+
 void APU::write_nr50(u8 val) {
     nr50 = val;
 }
@@ -129,6 +149,10 @@ u8 APU::read(u16 addr) {
         case 0xFF21: return ch4.read_nr42();
         case 0xFF22: return ch4.read_nr43();
         case 0xFF23: return ch4.read_nr44();
+
+        case 0xFF24: read_nr50(); break; // Master volume & VIN panning
+        case 0xFF25: read_nr51(); break; // Sound panning
+        case 0xFF26: read_nr52(); break; // Audio master control
     }
 
     // TODO(bug): NR50 (0xFF24), NR51 (0xFF25), NR52 (0xFF26) reads are not handled.

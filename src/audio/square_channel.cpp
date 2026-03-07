@@ -229,3 +229,7 @@ u8 SquareChannel::output() {
 
     return bit ? current_volume : 0;
 }
+
+bool SquareChannel::is_enabled() {
+    return enabled && dac_enabled;
+}

@@ -144,9 +144,9 @@ u8 WaveChannel::output() {
     // read the low nibble and odd positions read the high nibble - this is backwards.
     // Fix: swap the branches (even -> byte >> 4, odd -> byte & 0x0F).
     if (wave_position % 2) {
-        sample = byte >> 4;
-    } else {
         sample = byte & 0x0F;
+    } else {
+        sample = byte >> 4;
     }
 
     switch (output_level) {
@@ -157,4 +157,8 @@ u8 WaveChannel::output() {
     }
 
     return 0;
+}
+
+bool WaveChannel::is_enabled() {
+    return enabled && dac_enabled;
 }

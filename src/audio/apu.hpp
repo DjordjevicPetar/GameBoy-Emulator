@@ -38,4 +38,8 @@ private:
     void write_nr50(u8 val);
     void write_nr51(u8 val);
     void write_nr52(u8 val);
+
+    u8 read_nr50();
+    u8 read_nr51();
+    u8 read_nr52();
 };
