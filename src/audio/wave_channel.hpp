@@ -26,6 +26,8 @@ public:
     void clock_sound_length();
 
     u8 output();
+    
+    bool is_enabled();
 private:
     u8 nr30, nr31, nr32, nr33, nr34;
 

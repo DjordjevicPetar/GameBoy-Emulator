@@ -26,6 +26,8 @@ public:
     void clock_sweep();
 
     u8 output();
+
+    bool is_enabled();
 private:
     bool has_sweep;
 

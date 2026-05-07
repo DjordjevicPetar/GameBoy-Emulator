@@ -148,3 +148,7 @@ u8 NoiseChannel::output() {
 
     return (~lfsr & 1) ? current_volume : 0;
 }
+
+bool NoiseChannel::is_enabled() {
+    return enabled && dac_enabled;
+}

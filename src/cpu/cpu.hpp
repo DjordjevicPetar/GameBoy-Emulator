@@ -47,6 +47,7 @@ private:
     // State
     bool ime_ = false;           // Interrupt Master Enable
     bool ei_pending_ = false;    // EI delay (IME enabled after next instruction)
+    bool ei_was_pending_ = false;
     bool halted_ = false;        // CPU halted, waiting for interrupt
     bool halt_bug_triggered_ = false;  // HALT bug: next instruction read doesn't increment PC
     bool stopped_ = false;            // CPU stopped, waiting for button press
