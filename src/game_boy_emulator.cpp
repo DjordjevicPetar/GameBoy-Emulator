@@ -100,38 +100,36 @@ void GameBoyEmulator::run_until_next_frame() {
     }
 }
 
-void GameBoyEmulator::emulate() {
-    // Initialize SDL
+bool GameBoyEmulator::initializeSDL() {
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << std::endl;
-        return;
+        return false;
     }
 
-    SDL_Window* window = SDL_CreateWindow("Game Boy Emulator", LCD_WIDTH * 4, LCD_HEIGHT * 4, SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow("Game Boy Emulator", LCD_WIDTH * 4, LCD_HEIGHT * 4, SDL_WINDOW_RESIZABLE);
     if (!window) {
         std::cerr << "SDL_CreateWindow failed: " << SDL_GetError() << std::endl;
         SDL_Quit();
-        return;
+        return false;
     }
 
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
+    renderer = SDL_CreateRenderer(window, NULL);
     if (!renderer) {
         std::cerr << "SDL_CreateRenderer failed: " << SDL_GetError() << std::endl;
         SDL_DestroyWindow(window);
         SDL_Quit();
-        return;
+        return false;
     }
 
-    SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 160, 144);
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 160, 144);
     if (!texture) {
         std::cerr << "SDL_CreateTexture failed: " << SDL_GetError() << std::endl;
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
-        return;
+        return false;
     }
 
-    // Initialize audio
     SDL_AudioSpec spec;
     SDL_zero(spec);
 
@@ -139,13 +137,49 @@ void GameBoyEmulator::emulate() {
     spec.format = SDL_AUDIO_S16;
     spec.channels = 2;
 
-    SDL_AudioStream* audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+    audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
 
     if (!audio_stream) {
         std::cerr << "SDL_AudioStream failed: " << SDL_GetError() << std::endl;
+    } else {
+        SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(audio_stream));
     }
 
-    SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(audio_stream));
+    return true;
+}
+
+void GameBoyEmulator::shutdownSDL() {
+    if (texture) {
+        SDL_DestroyTexture(texture);
+        texture = nullptr;
+    }
+
+    if (renderer) {
+        SDL_DestroyRenderer(renderer);
+        renderer = nullptr;
+    }
+    
+    if (window) {
+        SDL_DestroyWindow(window);
+        window = nullptr;
+    }
+
+    if (audio_stream) {
+        SDL_FlushAudioStream(audio_stream);
+        SDL_UnbindAudioStream(audio_stream);
+        SDL_DestroyAudioStream(audio_stream);
+        audio_stream = nullptr;
+    }
+    
+    SDL_Quit();
+}
+
+void GameBoyEmulator::emulate() {
+    if (!initializeSDL()) {
+        return;
+    }
+
+    ppu_.set_mmu(&mmu_);
 
     bool running = true;
 
@@ -153,11 +187,6 @@ void GameBoyEmulator::emulate() {
     const double target_ms = 1000.0 / target_fps;
 
     u32 last = SDL_GetTicks();
-
-    // TODO: Circular dependency (PPU needs MMU, MMU needs PPU) is resolved with a
-    // post-construction setter. Consider restructuring so PPU reads VRAM/OAM directly
-    // from its own memory, and only uses MMU for DMA source reads.
-    ppu_.set_mmu(&mmu_);
 
     // Main emulation loop
     while (running) {
@@ -212,13 +241,5 @@ void GameBoyEmulator::emulate() {
         last = SDL_GetTicks();
     }
 
-    SDL_DestroyTexture(texture);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-
-    SDL_FlushAudioStream(audio_stream);
-    SDL_UnbindAudioStream(audio_stream);
-    SDL_DestroyAudioStream(audio_stream);
-    
-    SDL_Quit();
+    shutdownSDL();
 }

@@ -47,5 +47,13 @@ private:
     // Audio
     u32 cycles_from_audio_sample = 0;
     std::vector<s16> audio_buffer;
+
+    SDL_Window* window = nullptr;
+    SDL_Renderer* renderer = nullptr;
+    SDL_Texture* texture = nullptr;
+    SDL_AudioStream* audio_stream = nullptr;
+
+    bool initializeSDL();
+    void shutdownSDL();
 };
 
